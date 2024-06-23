@@ -1,0 +1,18 @@
+{
+  "prefix": "v",
+  "nonVerifiedRoleId": "862862160156426300",
+  "allowedRoles": ["952275776303149176", "812318686936825867"],
+  "logChannelId": "1254231233630834788",
+  "allowedChannelId": "800640245992652840",
+  "verificationVcId": "1005213582977421383",
+  "verificationVcId2": "913899047989936138",
+  "notificationChannelId": "1254231602029133956",
+  "adminRoleId": "1254231844983930894",
+  "roles": {
+    "foreign": "800706181441257483",
+    "english": "819334226105204796",
+    "scholar": "922269254223560706",
+    "french": "988173767006093343",
+    "count": "800548678480822283"
+  }
+}
