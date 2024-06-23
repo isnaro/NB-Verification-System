@@ -39,7 +39,7 @@ client.on('messageCreate', async message => {
         return message.reply(`This command only works in <#${config.allowedChannelId}>.`);
     }
 
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const args = message.content.slice(prefix.length).trim().split(/, +| +/); // Split on comma+space or space
     const userId = args.shift();
     const user = await message.guild.members.fetch(userId).catch(() => null);
 
@@ -62,7 +62,7 @@ client.on('messageCreate', async message => {
         ageRole = config.roles["25 - 30 YO"];
     }
 
-    const otherRoles = args.filter(arg => isNaN(arg)).map(role => role.trim());
+    const otherRoles = args.filter(arg => isNaN(arg)).map(role => role.trim().toLowerCase());
     const rolesToAdd = otherRoles.map(role => config.roles[role]).filter(Boolean);
 
     if (ageRole) {
