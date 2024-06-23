@@ -52,8 +52,25 @@ client.on('messageCreate', async message => {
         return message.reply('This user is already verified.');
     }
 
-    const roleArgs = args.join(' ').split(',').map(role => role.trim());
-    const rolesToAdd = roleArgs.map(role => config.roles[role]).filter(Boolean);
+    const age = parseInt(args[0]);
+    let ageRole;
+    if (age >= 15 && age <= 17) {
+        ageRole = config.roles["15 - 17 YO"];
+    } else if (age >= 18 && age <= 24) {
+        ageRole = config.roles["18 - 24 YO"];
+    } else if (age >= 25 && age <= 30) {
+        ageRole = config.roles["25 - 30 YO"];
+    }
+
+    const otherRoles = args.slice(1).join(' ').split(',').map(role => role.trim());
+    const rolesToAdd = otherRoles.map(role => config.roles[role]).filter(Boolean);
+
+    if (ageRole) {
+        rolesToAdd.push(ageRole);
+    }
+
+    // Always add the "Giveaways" and "Events" roles
+    rolesToAdd.push("809166576989372466", "801187769179308062");
 
     try {
         await user.roles.remove(config.nonVerifiedRoleId);
@@ -61,11 +78,12 @@ client.on('messageCreate', async message => {
         let assignedRolesMessage = 'No roles assigned';
         if (rolesToAdd.length) {
             await user.roles.add(rolesToAdd);
-            assignedRolesMessage = `Assigned roles: ${roleArgs.join(', ')}`;
+            assignedRolesMessage = `Assigned roles: ${rolesToAdd.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
         }
 
         const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
         const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+        const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
         const verificationEmbed = new EmbedBuilder()
             .setTitle('User Verified')
@@ -76,6 +94,7 @@ client.on('messageCreate', async message => {
                 { name: 'Moderator', value: `${message.author.tag} (${message.author.id})` },
                 { name: 'Verification Date', value: verificationDate },
                 { name: 'Join Date', value: joinDate },
+                { name: 'Account Creation Date', value: accountCreationDate },
                 { name: 'Assigned Roles', value: assignedRolesMessage }
             )
             .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
@@ -99,22 +118,24 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
         const member = newState.member;
         // Check if the user has the non-verified role
         if (member.roles.cache.has(config.nonVerifiedRoleId)) {
-            const notificationChannel = client.channels.cache.get(config.notificationChannelId);
-            if (notificationChannel) {
-                const channelId = newState.channelId; // Get the ID of the channel the user joined
-                const joinDate = moment(member.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
-                const embed = new EmbedBuilder()
-                    .setTitle('User Needs Verification')
-                    .setColor('#FF0000')
-                    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-                    .addFields(
-                        { name: 'User', value: `${member.user.tag} (${member.id})` },
-                        { name: 'Join Date', value: joinDate },
-                        { name: 'Action Required', value: `Join the voice channel <#${channelId}> to verify them.` }
-                    )
-                    .setFooter({ text: 'Verification Required', iconURL: member.user.displayAvatarURL({ dynamic: true }) })
-                    .setTimestamp();
+            const channelId = newState.channelId; // Get the ID of the channel the user joined
+            const joinDate = moment(member.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const accountCreationDate = moment(member.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const embed = new EmbedBuilder()
+                .setTitle('User Needs Verification')
+                .setColor('#FF0000')
+                .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+                .addFields(
+                    { name: 'User', value: `${member.user.tag} (${member.id})` },
+                    { name: 'Join Date', value: joinDate },
+                    { name: 'Account Creation Date', value: accountCreationDate },
+                    { name: 'Action Required', value: `Join the voice channel <#${channelId}> to verify them.` }
+                )
+                .setFooter({ text: 'Verification Required', iconURL: member.user.displayAvatarURL({ dynamic: true }) })
+                .setTimestamp();
 
+            const notificationChannel = client.channels.cache.get(channelId); // Send the notification to the verification voice channel
+            if (notificationChannel) {
                 notificationChannel.send({ content: `<@&${config.adminRoleId}>`, embeds: [embed] });
             }
         }
