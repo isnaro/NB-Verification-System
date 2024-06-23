@@ -52,7 +52,7 @@ client.on('messageCreate', async message => {
         return message.reply('This user is already verified.');
     }
 
-    const age = parseInt(args[0]);
+    const age = parseInt(args.find(arg => !isNaN(arg)));
     let ageRole;
     if (age >= 15 && age <= 17) {
         ageRole = config.roles["15 - 17 YO"];
@@ -62,7 +62,7 @@ client.on('messageCreate', async message => {
         ageRole = config.roles["25 - 30 YO"];
     }
 
-    const otherRoles = args.slice(1).join(' ').split(',').map(role => role.trim());
+    const otherRoles = args.filter(arg => isNaN(arg)).map(role => role.trim());
     const rolesToAdd = otherRoles.map(role => config.roles[role]).filter(Boolean);
 
     if (ageRole) {
@@ -70,7 +70,7 @@ client.on('messageCreate', async message => {
     }
 
     // Always add the "Giveaways" and "Events" roles
-    rolesToAdd.push("809166576989372466", "801187769179308062");
+    rolesToAdd.push(config.roles.Giveaways, config.roles.Events);
 
     try {
         await user.roles.remove(config.nonVerifiedRoleId);
