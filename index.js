@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
-const moment = require('moment-timezone'); // Add moment-timezone for date formatting
+const moment = require('moment-timezone');
+const stringSimilarity = require('string-similarity'); // Import string-similarity
 require('dotenv').config();
 const keepAlive = require('./keep_alive'); // Import keep_alive.js
 
@@ -24,6 +25,12 @@ client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
     keepAlive(); // Call the keepAlive function
 });
+
+function getClosestRoleName(input, roles) {
+    const roleNames = Object.keys(roles);
+    const matches = stringSimilarity.findBestMatch(input, roleNames);
+    return matches.bestMatch.target;
+}
 
 client.on('messageCreate', async message => {
     // Ignore messages from bots and non-command messages
@@ -62,7 +69,7 @@ client.on('messageCreate', async message => {
         ageRole = config.roles["25 - 30 YO"];
     }
 
-    const otherRoles = args.filter(arg => isNaN(arg)).map(role => role.trim().toLowerCase());
+    const otherRoles = args.filter(arg => isNaN(arg)).map(role => getClosestRoleName(role.trim().toLowerCase(), config.roles));
     const rolesToAdd = otherRoles.map(role => config.roles[role]).filter(Boolean);
 
     if (ageRole) {
