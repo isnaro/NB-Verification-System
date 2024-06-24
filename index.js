@@ -29,7 +29,10 @@ client.once('ready', () => {
 function getClosestRoleName(input, roles) {
     const roleNames = Object.keys(roles);
     const matches = stringSimilarity.findBestMatch(input, roleNames);
-    return matches.bestMatch.target;
+    if (matches.bestMatch.rating >= 0.6) { // Use a threshold to avoid assigning incorrect roles
+        return matches.bestMatch.target;
+    }
+    return null;
 }
 
 client.on('messageCreate', async message => {
@@ -69,23 +72,25 @@ client.on('messageCreate', async message => {
         ageRole = config.roles["25 - 30 YO"];
     }
 
-    const otherRoles = args.filter(arg => isNaN(arg)).map(role => getClosestRoleName(role.trim().toLowerCase(), config.roles));
-    const rolesToAdd = otherRoles.map(role => config.roles[role]).filter(Boolean);
+    const otherRoles = args.filter(arg => isNaN(arg)).map(role => {
+        const matchedRole = getClosestRoleName(role.trim().toLowerCase(), config.roles);
+        return matchedRole ? config.roles[matchedRole] : null;
+    }).filter(Boolean);
 
     if (ageRole) {
-        rolesToAdd.push(ageRole);
+        otherRoles.push(ageRole);
     }
 
     // Always add the "Giveaways" and "Events" roles
-    rolesToAdd.push(config.roles.Giveaways, config.roles.Events);
+    otherRoles.push(config.roles.Giveaways, config.roles.Events);
 
     try {
         await user.roles.remove(config.nonVerifiedRoleId);
 
         let assignedRolesMessage = 'No roles assigned';
-        if (rolesToAdd.length) {
-            await user.roles.add(rolesToAdd);
-            assignedRolesMessage = `Assigned roles: ${rolesToAdd.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
+        if (otherRoles.length) {
+            await user.roles.add(otherRoles);
+            assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
         }
 
         const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
