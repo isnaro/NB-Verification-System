@@ -154,4 +154,16 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     }
 });
 
+// New event listener for auto-reacting to messages in the polls channel
+client.on('messageCreate', async message => {
+    if (message.channel.id === config.pollsChannelId) {
+        try {
+            await message.react(`<:ALG_stonks_up:${config.upVoteEmojiId}>`);
+            await message.react(`<:ALG_stonks_down:${config.downVoteEmojiId}>`);
+        } catch (error) {
+            console.error('Failed to react to the message:', error);
+        }
+    }
+});
+
 client.login(process.env.DISCORD_TOKEN);

@@ -8,6 +8,9 @@
   "verificationVcId2": "913899047989936138",
   "notificationChannelId": "1254231602029133956",
   "adminRoleId": "1254231844983930894",
+  "pollsChannelId": "1259300558045450340",
+  "upVoteEmojiId": "801738028904480798",
+  "downVoteEmojiId": "801738055408418816",
   "roles": {
     "foreign": "800706181441257483",
     "english": "819334226105204796",
