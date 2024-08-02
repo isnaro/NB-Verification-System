@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
-const moment = require('moment-timezone'); // Import moment
+const moment = require('moment-timezone');
 
 module.exports = {
     name: 'whoverif',
@@ -18,15 +18,16 @@ module.exports = {
             return message.reply('No verification record found for this user.');
         }
 
+        const user = await message.guild.members.fetch(userId).catch(() => null);
         const moderator = await message.guild.members.fetch(verification.moderatorId).catch(() => null);
         const verificationDate = moment(verification.verificationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
         const embed = new EmbedBuilder()
             .setTitle('User Verification Details')
             .setColor('#00FF00')
-            .setThumbnail(moderator ? moderator.user.displayAvatarURL({ dynamic: true }) : null)
+            .setThumbnail(user ? user.user.displayAvatarURL({ dynamic: true }) : null)
             .addFields(
-                { name: 'Verified User', value: `${userId}` },
+                { name: 'Verified User', value: `${user ? `${user.user.tag} (${user.id})` : userId}` },
                 { name: 'Moderator', value: `${moderator ? moderator.user.tag : 'Unknown'} (<@${verification.moderatorId}>)` },
                 { name: 'Verification Date', value: verificationDate }
             )
