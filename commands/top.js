@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
 
@@ -18,7 +18,7 @@ module.exports = {
         }
 
         try {
-            // Aggregate verifications by moderatorId
+            // Aggregate verifications by moderatorId, excluding those with zero verifications
             const aggregation = await Verification.aggregate([
                 {
                     $group: {
@@ -27,25 +27,88 @@ module.exports = {
                     }
                 },
                 {
-                    $sort: { count: -1 }
+                    $match: { count: { $gt: 0 } } // Exclude users with zero verifications
                 },
                 {
-                    $limit: 5
+                    $sort: { count: -1 }
                 }
             ]);
 
-            const topVerifiers = await Promise.all(aggregation.map(async (item, index) => {
-                const moderator = await message.guild.members.fetch(item._id).catch(() => null);
-                return `#${index + 1} ${moderator ? `${moderator.user.tag} (<@${moderator.id}>)` : 'Unknown'} - ${item.count} verifications`;
-            }));
+            if (aggregation.length === 0) {
+                return message.channel.send('No verifications yet.');
+            }
 
-            const embed = new EmbedBuilder()
-                .setTitle(`Top Verifiers (${timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)})`)
-                .setColor('#00FF00')
-                .setDescription(topVerifiers.join('\n') || 'No verifications yet.')
-                .setTimestamp();
+            const itemsPerPage = 5;
+            let page = 0;
 
-            message.channel.send({ embeds: [embed] });
+            const generateEmbed = (start) => {
+                const current = aggregation.slice(start, start + itemsPerPage);
+                const topVerifiers = current.map((item, index) => {
+                    const moderator = message.guild.members.cache.get(item._id);
+                    return `#${start + index + 1} ${moderator ? `${moderator.user.tag} (<@${moderator.id}>)` : 'Unknown'} - ${item.count} verifications`;
+                });
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`Top Verifiers (${timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)})`)
+                    .setColor('#00FF00')
+                    .setDescription(topVerifiers.join('\n') || 'No verifications yet.')
+                    .setFooter({ text: `Page ${page + 1} of ${Math.ceil(aggregation.length / itemsPerPage)}` })
+                    .setTimestamp();
+
+                return embed;
+            };
+
+            const canFitOnOnePage = aggregation.length <= itemsPerPage;
+            const embedMessage = await message.channel.send({
+                embeds: [generateEmbed(0)],
+                components: canFitOnOnePage ? [] : [new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('prev')
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page === 0),
+                    new ButtonBuilder()
+                        .setCustomId('next')
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page === Math.ceil(aggregation.length / itemsPerPage) - 1)
+                )]
+            });
+
+            if (canFitOnOnePage) return;
+
+            const collector = embedMessage.createMessageComponentCollector({
+                filter: interaction => interaction.user.id === message.author.id,
+                time: 60000
+            });
+
+            collector.on('collect', interaction => {
+                if (interaction.customId === 'prev') {
+                    page--;
+                } else if (interaction.customId === 'next') {
+                    page++;
+                }
+
+                interaction.update({
+                    embeds: [generateEmbed(page * itemsPerPage)],
+                    components: [new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('prev')
+                            .setLabel('Previous')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(page === 0),
+                        new ButtonBuilder()
+                            .setCustomId('next')
+                            .setLabel('Next')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(page === Math.ceil(aggregation.length / itemsPerPage) - 1)
+                    )]
+                });
+            });
+
+            collector.on('end', () => {
+                embedMessage.edit({ components: [] });
+            });
         } catch (error) {
             console.error('Error executing top command:', error);
             message.reply('There was an error executing the top command.');

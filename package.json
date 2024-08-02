@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "A Discord bot for verification using prefix commands.",
   "dependencies": {
+    "@discordjs/builders": "^1.8.2",
     "discord.js": "^14.15.2",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
