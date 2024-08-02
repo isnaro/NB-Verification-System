@@ -10,7 +10,7 @@ module.exports = {
             .setColor('#00FF00')
             .setDescription('Quick reference guide for using the verification bot commands.')
             .addFields(
-                { name: 'Prerequisites', value: 'Ensure you have the necessary roles and permissions. Use the designated channels for commands.' },
+                { name: 'Prerequisites', value: 'These commands reuires <@&812318686936825867> or <@&952275776303149176> roles. Use the appropriate channels for the commands.' },
                 { name: 'Commands Overview', value: '1. **`v <user_id> [age] [roles]`**\n2. **`top [day|week|month|total]`**\n3. **`myverif [day|week|month|total]`**\n4. **`whoverif <user_id>`**' },
                 { name: '`v` Command', value: '**Usage**: `v <user_id> [age] [roles]`\n**Example**: `verify 123456789012345678 20 english scholar`\nUse in channel : `<#800640245992652840>`' },
                 { name: '`vtop` Command', value: '**Usage**: `top [day|week|month|total]`\n**Example**: `top day`\nUse in channel : `<#800545663125422100>`' },
