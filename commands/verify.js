@@ -64,7 +64,7 @@ module.exports = {
             const moderatorId = message.author.id;
             let verification = await Verification.findOne({ userId });
             if (!verification) {
-                verification = new Verification({ moderatorId, userId });
+                verification = new Verification({ moderatorId, userId, verificationDate: new Date(), counts: { day: 1, week: 1, month: 1, total: 1 }, assignedRoles: assignedRolesMessage });
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
@@ -85,7 +85,7 @@ module.exports = {
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
                 .addFields(
                     { name: 'Verified User', value: `${user.user.tag} (${user.id})` },
-                    { name: 'Moderator', value: `${message.author.tag} (${message.author.id})` },
+                    { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
                     { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
