@@ -9,7 +9,7 @@ module.exports = {
     async execute(message, args, client) {
         // Check if the user has one of the allowed roles
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
-            return;
+            return message.reply('You do not have permission to use this command.');
         }
 
         // Check if the command is used in the allowed channel
@@ -64,10 +64,17 @@ module.exports = {
             const moderatorId = message.author.id;
             let verification = await Verification.findOne({ userId });
             if (!verification) {
-                verification = new Verification({ moderatorId, userId, verificationDate: new Date(), counts: { day: 1, week: 1, month: 1, total: 1 }, assignedRoles: assignedRolesMessage });
+                verification = new Verification({
+                    userId,
+                    moderatorId,
+                    verificationDate: new Date(),
+                    assignedRoles: assignedRolesMessage,
+                    counts: { day: 1, week: 1, month: 1, total: 1 }
+                });
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
+                verification.assignedRoles = assignedRolesMessage;
                 verification.counts.day++;
                 verification.counts.week++;
                 verification.counts.month++;
@@ -85,7 +92,7 @@ module.exports = {
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
                 .addFields(
                     { name: 'Verified User', value: `${user.user.tag} (${user.id})` },
-                    { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
+                    { name: 'Moderator', value: `${message.author.tag} (${message.author.id})` },
                     { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
