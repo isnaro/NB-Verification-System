@@ -22,14 +22,20 @@ module.exports = {
         const moderator = await message.guild.members.fetch(verification.moderatorId).catch(() => null);
         const verificationDate = moment(verification.verificationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
+        const joinDate = user ? moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') : 'Unknown';
+        const accountCreationDate = user ? moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') : 'Unknown';
+
         const embed = new EmbedBuilder()
-            .setTitle('User Verification Details')
+            .setTitle('User Verified')
             .setColor('#00FF00')
             .setThumbnail(user ? user.user.displayAvatarURL({ dynamic: true }) : null)
             .addFields(
-                { name: 'Verified User', value: `${user ? `${user.user.tag} (${user.id})` : userId}` },
-                { name: 'Moderator', value: `${moderator ? moderator.user.tag : 'Unknown'} (<@${verification.moderatorId}>)` },
-                { name: 'Verification Date', value: verificationDate }
+                { name: 'Verified User', value: `${user ? `${user.user.tag} (<@${user.id}>)` : userId}` },
+                { name: 'Moderator', value: `${moderator ? `${moderator.user.tag} (<@${moderator.id}>)` : 'Unknown'}` },
+                { name: 'Verification Date', value: verificationDate },
+                { name: 'Join Date', value: joinDate },
+                { name: 'Account Creation Date', value: accountCreationDate },
+                { name: 'Assigned Roles', value: verification.assignedRoles || 'No roles assigned' }
             )
             .setFooter({ text: `Verified by ${moderator ? moderator.user.tag : 'Unknown'}`, iconURL: moderator ? moderator.user.displayAvatarURL({ dynamic: true }) : null })
             .setTimestamp();
