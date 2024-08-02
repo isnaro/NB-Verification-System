@@ -17,12 +17,26 @@ module.exports = {
             return message.reply('Invalid time frame. Valid options are: day, week, month, total.');
         }
 
-        const verifications = await Verification.find().sort({ [`counts.${timeFrame}`]: -1 }).limit(5);
+        // Aggregate verifications by moderatorId
+        const aggregation = await Verification.aggregate([
+            {
+                $group: {
+                    _id: "$moderatorId",
+                    count: { $sum: `$counts.${timeFrame}` }
+                }
+            },
+            {
+                $sort: { count: -1 }
+            },
+            {
+                $limit: 5
+            }
+        ]);
 
-        const topVerifiers = verifications.map((verification, index) => {
-            const moderator = message.guild.members.cache.get(verification.moderatorId);
-            return `#${index + 1} ${moderator ? moderator.user.tag : 'Unknown'} - ${verification.counts[timeFrame]} verifications`;
-        });
+        const topVerifiers = await Promise.all(aggregation.map(async (item, index) => {
+            const moderator = await message.guild.members.fetch(item._id).catch(() => null);
+            return `#${index + 1} ${moderator ? moderator.user.tag : 'Unknown'} - ${item.count} verifications`;
+        }));
 
         const embed = new EmbedBuilder()
             .setTitle(`Top Verifiers (${timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)})`)
