@@ -5,7 +5,7 @@ const Verification = require('../models/Verification');
 const config = require('../config.json');
 
 module.exports = {
-    name: 'verify',
+    name: ' ',
     async execute(message, args) {
         // Check if the user has one of the allowed roles
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
@@ -68,11 +68,11 @@ module.exports = {
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
+                verification.counts.day++;
+                verification.counts.week++;
+                verification.counts.month++;
+                verification.counts.total++;
             }
-            verification.counts.day++;
-            verification.counts.week++;
-            verification.counts.month++;
-            verification.counts.total++;
             await verification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
