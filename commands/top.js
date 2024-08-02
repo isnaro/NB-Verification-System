@@ -17,33 +17,38 @@ module.exports = {
             return message.reply('Invalid time frame. Valid options are: day, week, month, total.');
         }
 
-        // Aggregate verifications by moderatorId
-        const aggregation = await Verification.aggregate([
-            {
-                $group: {
-                    _id: "$moderatorId",
-                    count: { $sum: `$counts.${timeFrame}` }
+        try {
+            // Aggregate verifications by moderatorId
+            const aggregation = await Verification.aggregate([
+                {
+                    $group: {
+                        _id: "$moderatorId",
+                        count: { $sum: `$counts.${timeFrame}` }
+                    }
+                },
+                {
+                    $sort: { count: -1 }
+                },
+                {
+                    $limit: 5
                 }
-            },
-            {
-                $sort: { count: -1 }
-            },
-            {
-                $limit: 5
-            }
-        ]);
+            ]);
 
-        const topVerifiers = await Promise.all(aggregation.map(async (item, index) => {
-            const moderator = await message.guild.members.fetch(item._id).catch(() => null);
-            return `#${index + 1} ${moderator ? `${moderator.user.tag} (<@${moderator.id}>)` : 'Unknown'} - ${item.count} verifications`;
-        }));
+            const topVerifiers = await Promise.all(aggregation.map(async (item, index) => {
+                const moderator = await message.guild.members.fetch(item._id).catch(() => null);
+                return `#${index + 1} ${moderator ? `${moderator.user.tag} (<@${moderator.id}>)` : 'Unknown'} - ${item.count} verifications`;
+            }));
 
-        const embed = new EmbedBuilder()
-            .setTitle(`Top Verifiers (${timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)})`)
-            .setColor('#00FF00')
-            .setDescription(topVerifiers.join('\n') || 'No verifications yet.')
-            .setTimestamp();
+            const embed = new EmbedBuilder()
+                .setTitle(`Top Verifiers (${timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)})`)
+                .setColor('#00FF00')
+                .setDescription(topVerifiers.join('\n') || 'No verifications yet.')
+                .setTimestamp();
 
-        message.channel.send({ embeds: [embed] });
+            message.channel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error executing top command:', error);
+            message.reply('There was an error executing the top command.');
+        }
     }
 };
