@@ -35,7 +35,7 @@ module.exports = {
 
         const topVerifiers = await Promise.all(aggregation.map(async (item, index) => {
             const moderator = await message.guild.members.fetch(item._id).catch(() => null);
-            return `#${index + 1} ${moderator ? moderator.user.tag : 'Unknown'} - ${item.count} verifications`;
+            return `#${index + 1} ${moderator ? `${moderator.user.tag} (<@${moderator.id}>)` : 'Unknown'} - ${item.count} verifications`;
         }));
 
         const embed = new EmbedBuilder()
