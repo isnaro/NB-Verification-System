@@ -62,40 +62,20 @@ module.exports = {
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            let verification = await Verification.findOne({ userId });
 
-            if (!verification) {
-                verification = new Verification({
-                    userId,
-                    moderatorId,
-                    verificationDate: new Date(),
-                    assignedRoles: assignedRolesMessage,
-                    counts: { day: 1, week: 1, month: 1, total: 1 }
-                });
-            } else {
-                verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
-                verification.verificationDate = new Date();
-                verification.assignedRoles = assignedRolesMessage;
+            // Increment verification counts
+            const result = await Verification.updateOne(
+                { moderatorId },
+                {
+                    $inc: { 'counts.day': 1, 'counts.week': 1, 'counts.month': 1, 'counts.total': 1 },
+                    $set: { verificationDate: new Date(), assignedRoles: assignedRolesMessage }
+                },
+                { upsert: true }
+            );
+
+            if (result.nModified === 0 && result.upsertedCount === 0) {
+                console.error('No documents were modified or upserted. Possible error.');
             }
-            
-            await verification.save();
-
-            // Update moderator verification counts
-            let moderatorVerification = await Verification.findOne({ moderatorId });
-
-            if (!moderatorVerification) {
-                moderatorVerification = new Verification({
-                    moderatorId,
-                    counts: { day: 1, week: 1, month: 1, total: 1 }
-                });
-            } else {
-                moderatorVerification.counts.day++;
-                moderatorVerification.counts.week++;
-                moderatorVerification.counts.month++;
-                moderatorVerification.counts.total++;
-            }
-
-            await moderatorVerification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
