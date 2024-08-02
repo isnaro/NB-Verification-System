@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.j
 const fs = require('fs');
 require('dotenv').config();
 const mongoose = require('mongoose');
-const moment = require('moment-timezone'); // Add this line
+const moment = require('moment-timezone');
 const keepAlive = require('./keep_alive'); // Import keep_alive.js
 require('./anticrash'); // Import anticrash.js
 
@@ -47,7 +47,7 @@ client.on('messageCreate', async message => {
     const content = message.content.slice(config.prefix.length).trim();
     const args = content.split(/ +/);
 
-    // Check if the first argument is a number
+    // Check if the first argument is a number for the verify command
     if (!isNaN(args[0])) {
         const command = client.commands.get('verify');
         if (command) {

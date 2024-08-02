@@ -1,9 +1,15 @@
 const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
+const config = require('../config.json');
 
 module.exports = {
     name: 'top',
     async execute(message, args, client) {
+        // Check if the user has one of the allowed roles
+        if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
+            return message.reply('You do not have permission to use this command.');
+        }
+
         const timeFrame = args[0] || 'total';
         const validTimeFrames = ['day', 'week', 'month', 'total'];
 
