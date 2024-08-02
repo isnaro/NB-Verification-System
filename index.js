@@ -13,7 +13,6 @@ const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
     useUnifiedTopology: true
 }).then(() => {
     console.log('Connected to MongoDB');
@@ -192,7 +191,7 @@ client.on('messageCreate', async message => {
         return;
     }
 
-    if (command === 'top') {
+    if (command === 'vtop') {
         const timeFrame = args[0] || 'total';
         const validTimeFrames = ['day', 'week', 'month', 'total'];
 
@@ -216,7 +215,7 @@ client.on('messageCreate', async message => {
         message.channel.send({ embeds: [embed] });
     }
 
-    if (command === 'myverif') {
+    if (command === 'vmyverif') {
         const timeFrame = args[0] || 'total';
         const validTimeFrames = ['day', 'week', 'month', 'total'];
 
@@ -233,7 +232,7 @@ client.on('messageCreate', async message => {
         message.reply(`You have made ${verification.counts[timeFrame]} verifications in the ${timeFrame}.`);
     }
 
-    if (command === 'whoverif') {
+    if (command === 'vwhoverif') {
         const userId = args[0];
         const verification = await Verification.findOne({ userId });
 
