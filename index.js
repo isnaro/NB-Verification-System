@@ -43,17 +43,32 @@ client.once('ready', () => {
 client.on('messageCreate', async message => {
     if (message.author.bot || !message.content.startsWith(config.prefix)) return;
 
-    const args = message.content.slice(config.prefix.length).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
+    const content = message.content.slice(config.prefix.length).trim();
+    const args = content.split(/ +/);
 
-    const command = client.commands.get('verify');
-    if (!command) return;
-
-    try {
-        await command.execute(message, [commandName, ...args], client);
-    } catch (error) {
-        console.error(error);
-        message.reply('There was an error executing that command.');
+    // Check if the first argument is a number
+    if (!isNaN(args[0])) {
+        const command = client.commands.get('verify');
+        if (command) {
+            try {
+                await command.execute(message, args, client);
+            } catch (error) {
+                console.error(error);
+                message.reply('There was an error executing that command.');
+            }
+        }
+    } else {
+        // Handle other commands
+        const commandName = args.shift().toLowerCase();
+        const command = client.commands.get(commandName);
+        if (command) {
+            try {
+                await command.execute(message, args, client);
+            } catch (error) {
+                console.error(error);
+                message.reply('There was an error executing that command.');
+            }
+        }
     }
 });
 
