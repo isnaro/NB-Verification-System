@@ -150,12 +150,14 @@ client.on('messageCreate', async message => {
             let verification = await Verification.findOne({ userId });
             if (!verification) {
                 verification = new Verification({ moderatorId, userId });
+            } else {
+                verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
+                verification.verificationDate = new Date();
             }
             verification.counts.day++;
             verification.counts.week++;
             verification.counts.month++;
             verification.counts.total++;
-            verification.verificationDate = new Date();
             await verification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
