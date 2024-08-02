@@ -16,7 +16,7 @@ module.exports = {
                 { name: '`vtop` Command', value: '**Description**: Displays the top verifiers for a specified timeframe.\n\n**Usage**: `vtop [day|week|month|total]`\n**Example**: `vtop day`\n**Channel**: `<#800545663125422100>`' },
                 { name: '`vmyverif` Command', value: '**Description**: Shows the number of verifications you have made in a specified timeframe.\n\n**Usage**: `vmyverif [day|week|month|total]`\n**Example**: `vmyverif week`\n**Channel**: `<#800545663125422100>`' },
                 { name: '`vwhoverif` Command', value: '**Description**: Shows who verified a specific user and provides detailed verification information.\n\n**Usage**: `vwhoverif <user_id>`\n**Example**: `vwhoverif 123456789012345678`\n**Channel**: `<#800545663125422100>`' },
-                { name: 'Notes', value: 'Always use commands in the designated channels. Ensure you have the required roles. The bot will confirm successful operations or provide error messages if something goes wrong.' }
+                { name: 'Notes', value: 'Always use commands in the appropriate channels. Ensure you have <@&812318686936825867> or <@&952275776303149176> while using the bot. The bot will confirm successful operations or provide error messages if something goes wrong.' }
             )
             .setTimestamp();
 
