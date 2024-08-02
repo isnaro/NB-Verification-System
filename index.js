@@ -84,7 +84,7 @@ client.on('messageCreate', async message => {
     const args = message.content.slice(prefix.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    if (command === 'verify') {
+    if (command === 'v') {
         // Check if the user has one of the allowed roles
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
             return;
@@ -179,7 +179,7 @@ client.on('messageCreate', async message => {
         }
     }
 
-    if ((message.author.id !== '387923086730723329' && message.author.id !== '1252982138656129148') || message.channel.id !== '800545663125422100') {
+    if ((message.author.id !== '387923086730723329' && message.author.id !== '1252982138656129148') || (message.channel.id !== '800545663125422100' && message.channel.id !== config.allowedChannelId)) {
         return;
     }
 
