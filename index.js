@@ -6,6 +6,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const cron = require('node-cron');
 const keepAlive = require('./keep_alive'); // Import keep_alive.js
+require('./anticrash'); // Import anticrash.js
 
 // Load the configuration file
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
