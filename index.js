@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 require('dotenv').config();
 const mongoose = require('mongoose');
@@ -67,6 +67,38 @@ client.on('messageCreate', async message => {
             } catch (error) {
                 console.error(error);
                 message.reply('There was an error executing that command.');
+            }
+        }
+    }
+});
+
+// Voice state update event listener
+client.on('voiceStateUpdate', async (oldState, newState) => {
+    // Check if the user joined one of the verification voice channels
+    if ((newState.channelId === config.verificationVcId || newState.channelId === config.verificationVcId2) 
+        && oldState.channelId !== newState.channelId) {
+        const member = newState.member;
+        // Check if the user has the non-verified role
+        if (member.roles.cache.has(config.nonVerifiedRoleId)) {
+            const channelId = newState.channelId; // Get the ID of the channel the user joined
+            const joinDate = moment(member.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const accountCreationDate = moment(member.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const embed = new EmbedBuilder()
+                .setTitle('User Needs Verification')
+                .setColor('#FF0000')
+                .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+                .addFields(
+                    { name: 'User', value: `${member.user.tag} (${member.id})` },
+                    { name: 'Join Date', value: joinDate },
+                    { name: 'Account Creation Date', value: accountCreationDate },
+                    { name: 'Action Required', value: `Join the voice channel <#${channelId}> to verify them.` }
+                )
+                .setFooter({ text: 'Verification Required', iconURL: member.user.displayAvatarURL({ dynamic: true }) })
+                .setTimestamp();
+
+            const notificationChannel = client.channels.cache.get(channelId); // Send the notification to the verification voice channel
+            if (notificationChannel) {
+                notificationChannel.send({ content: `<@&${config.adminRoleId}>`, embeds: [embed] });
             }
         }
     }
