@@ -3,7 +3,7 @@ const Verification = require('../models/Verification');
 
 module.exports = {
     name: 'top',
-    async execute(message, args) {
+    async execute(message, args, client) {
         const timeFrame = args[0] || 'total';
         const validTimeFrames = ['day', 'week', 'month', 'total'];
 

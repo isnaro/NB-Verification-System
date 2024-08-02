@@ -46,11 +46,11 @@ client.on('messageCreate', async message => {
     const args = message.content.slice(config.prefix.length).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
 
-    const command = client.commands.get(commandName);
+    const command = client.commands.get('verify');
     if (!command) return;
 
     try {
-        await command.execute(message, args);
+        await command.execute(message, [commandName, ...args], client);
     } catch (error) {
         console.error(error);
         message.reply('There was an error executing that command.');

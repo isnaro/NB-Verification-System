@@ -5,8 +5,8 @@ const Verification = require('../models/Verification');
 const config = require('../config.json');
 
 module.exports = {
-    name: ' ',
-    async execute(message, args) {
+    name: 'verify',
+    async execute(message, args, client) {
         // Check if the user has one of the allowed roles
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
             return;
