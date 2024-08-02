@@ -252,15 +252,6 @@ client.on('messageCreate', async message => {
     }
 });
 
-// Anti-crash handler
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', err => {
-    console.error('Uncaught Exception thrown:', err);
-});
-
 client.login(process.env.DISCORD_TOKEN);
 
 // Schedule resets
