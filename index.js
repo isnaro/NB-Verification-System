@@ -26,7 +26,15 @@ const verificationSchema = new mongoose.Schema({
     moderatorId: {
         type: String,
         required: true,
+    },
+    userId: {
+        type: String,
+        required: true,
         unique: true
+    },
+    verificationDate: {
+        type: Date,
+        default: Date.now
     },
     counts: {
         day: {
@@ -140,14 +148,15 @@ client.on('messageCreate', async message => {
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            let verification = await Verification.findOne({ moderatorId });
+            let verification = await Verification.findOne({ userId });
             if (!verification) {
-                verification = new Verification({ moderatorId });
+                verification = new Verification({ moderatorId, userId });
             }
             verification.counts.day++;
             verification.counts.week++;
             verification.counts.month++;
             verification.counts.total++;
+            verification.verificationDate = new Date();
             await verification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
@@ -202,6 +211,55 @@ client.on('messageCreate', async message => {
             .setTitle(`Top Verifiers (${timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)})`)
             .setColor('#00FF00')
             .setDescription(topVerifiers.join('\n') || 'No verifications yet.')
+            .setTimestamp();
+
+        message.channel.send({ embeds: [embed] });
+    }
+
+    if (command === 'myverif') {
+        const timeFrame = args[0] || 'total';
+        const validTimeFrames = ['day', 'week', 'month', 'total'];
+
+        if (!validTimeFrames.includes(timeFrame)) {
+            return message.reply('Invalid time frame. Valid options are: day, week, month, total.');
+        }
+
+        const verification = await Verification.findOne({ moderatorId: message.author.id });
+
+        if (!verification) {
+            return message.reply('You have not made any verifications yet.');
+        }
+
+        message.reply(`You have made ${verification.counts[timeFrame]} verifications in the ${timeFrame}.`);
+    }
+
+    if (command === 'whoverif') {
+        const userId = args[0];
+        const verification = await Verification.findOne({ userId });
+
+        if (!verification) {
+            return message.reply('This user has not been verified yet.');
+        }
+
+        const user = await message.guild.members.fetch(userId).catch(() => null);
+        const moderator = await message.guild.members.fetch(verification.moderatorId).catch(() => null);
+
+        const verificationDate = moment(verification.verificationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+        const joinDate = user ? moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') : 'Unknown'; // GMT+1
+        const accountCreationDate = user ? moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') : 'Unknown'; // GMT+1
+
+        const embed = new EmbedBuilder()
+            .setTitle('User Verification Details')
+            .setColor('#00FF00')
+            .setThumbnail(user ? user.user.displayAvatarURL({ dynamic: true }) : null)
+            .addFields(
+                { name: 'Verified User', value: `${user ? user.user.tag : 'Unknown'} (${userId})` },
+                { name: 'Moderator', value: `${moderator ? moderator.user.tag : 'Unknown'} (${verification.moderatorId})` },
+                { name: 'Verification Date', value: verificationDate },
+                { name: 'Join Date', value: joinDate },
+                { name: 'Account Creation Date', value: accountCreationDate }
+            )
+            .setFooter({ text: `Verified by ${moderator ? moderator.user.tag : 'Unknown'}`, iconURL: moderator ? moderator.user.displayAvatarURL({ dynamic: true }) : null })
             .setTimestamp();
 
         message.channel.send({ embeds: [embed] });
