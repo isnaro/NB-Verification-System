@@ -60,19 +60,20 @@ module.exports = {
                 assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
-            // Update verification counts in MongoDB for the moderator
+            // Ensure the moderator is in the verification list
             const moderatorId = message.author.id;
-
-            // Increment verification counts
-            const verificationUpdate = {
-                $inc: { 'counts.day': 1, 'counts.week': 1, 'counts.month': 1, 'counts.total': 1 },
-                $set: { verificationDate: new Date() }
-            };
-
             await Verification.updateOne(
                 { moderatorId },
-                verificationUpdate,
+                { 
+                    $setOnInsert: { counts: { day: 0, week: 0, month: 0, total: 0 } }
+                },
                 { upsert: true }
+            );
+
+            // Increment verification counts
+            await Verification.updateOne(
+                { moderatorId },
+                { $inc: { 'counts.day': 1, 'counts.week': 1, 'counts.month': 1, 'counts.total': 1 } }
             );
 
             // Create or update the verification record for the user
