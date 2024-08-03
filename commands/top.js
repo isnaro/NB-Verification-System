@@ -18,7 +18,7 @@ module.exports = {
         }
 
         try {
-            // Aggregate verifications by moderatorId, including those with zero verifications
+            // Aggregate verifications by moderatorId
             const aggregation = await Verification.aggregate([
                 {
                     $group: {
@@ -30,22 +30,6 @@ module.exports = {
                     $sort: { count: -1 }
                 }
             ]);
-
-            // Get all moderators with required roles
-            const guild = client.guilds.cache.get(config.guildId);
-            const moderators = guild.members.cache.filter(member => 
-                member.roles.cache.some(role => config.allowedRoles.includes(role.id))
-            );
-
-            // Ensure all moderators are in the list
-            moderators.forEach(mod => {
-                if (!aggregation.some(item => item._id === mod.id)) {
-                    aggregation.push({
-                        _id: mod.id,
-                        count: 0
-                    });
-                }
-            });
 
             if (aggregation.length === 0) {
                 return message.channel.send('No verifications yet.');
