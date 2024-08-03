@@ -18,11 +18,8 @@ module.exports = {
         }
 
         const userId = args.shift();
-        if (!userId) {
-            return message.reply('Please provide a user ID.');
-        }
-
         const user = await message.guild.members.fetch(userId).catch(() => null);
+
         if (!user) {
             return message.reply('User not found.');
         }
@@ -66,26 +63,13 @@ module.exports = {
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
             const verificationDate = new Date();
+            const joinDate = user.joinedAt;
+            const accountCreationDate = user.user.createdAt;
 
-            // Ensure the moderator is in the database
-            let moderatorVerification = await Verification.findOne({ moderatorId });
-            if (!moderatorVerification) {
-                moderatorVerification = new Verification({
-                    moderatorId,
-                    counts: { day: 0, week: 0, month: 0, total: 0 }
-                });
-            }
-            // Increment the moderator's verification counts
-            moderatorVerification.counts.day++;
-            moderatorVerification.counts.week++;
-            moderatorVerification.counts.month++;
-            moderatorVerification.counts.total++;
-            await moderatorVerification.save();
+            let verification = await Verification.findOne({ userId });
 
-            // Update or create verification for the user
-            let userVerification = await Verification.findOne({ userId });
-            if (!userVerification) {
-                userVerification = new Verification({
+            if (!verification) {
+                verification = new Verification({
                     userId,
                     moderatorId,
                     verificationDate,
@@ -93,18 +77,16 @@ module.exports = {
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
             } else {
-                userVerification.moderatorId = moderatorId;
-                userVerification.verificationDate = verificationDate;
-                userVerification.assignedRoles = assignedRolesMessage;
-                userVerification.counts.day++;
-                userVerification.counts.week++;
-                userVerification.counts.month++;
-                userVerification.counts.total++;
+                verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
+                verification.verificationDate = verificationDate;
+                verification.assignedRoles = assignedRolesMessage;
+                verification.counts.day++;
+                verification.counts.week++;
+                verification.counts.month++;
+                verification.counts.total++;
             }
-            await userVerification.save();
 
-            const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
-            const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            await verification.save();
 
             const verificationEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
@@ -113,9 +95,9 @@ module.exports = {
                 .addFields(
                     { name: 'Verified User', value: `${user.user.tag} (<@${user.id}>)` },
                     { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
-                    { name: 'Verification Date', value: verificationDate.toISOString().split('T').join(' ').split('.')[0] },
-                    { name: 'Join Date', value: joinDate },
-                    { name: 'Account Creation Date', value: accountCreationDate },
+                    { name: 'Verification Date', value: moment(verificationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') },
+                    { name: 'Join Date', value: moment(joinDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') },
+                    { name: 'Account Creation Date', value: moment(accountCreationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') },
                     { name: 'Assigned Roles', value: assignedRolesMessage }
                 )
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
