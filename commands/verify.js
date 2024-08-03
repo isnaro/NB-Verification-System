@@ -62,6 +62,8 @@ module.exports = {
 
             // Update verification counts in MongoDB for the moderator
             const moderatorId = message.author.id;
+
+            // Increment verification counts
             const verificationUpdate = {
                 $inc: { 'counts.day': 1, 'counts.week': 1, 'counts.month': 1, 'counts.total': 1 },
                 $set: { verificationDate: new Date() }
@@ -75,10 +77,10 @@ module.exports = {
 
             // Create or update the verification record for the user
             await Verification.updateOne(
-                { userId },
+                { userId: user.id },
                 {
                     $set: {
-                        userId,
+                        userId: user.id,
                         moderatorId,
                         verificationDate: new Date(),
                         assignedRoles: assignedRolesMessage
