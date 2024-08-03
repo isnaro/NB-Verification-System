@@ -41,11 +41,14 @@ async function resetDatabase(client) {
     }
 }
 
-client.on('ready', async () => {
-    if (process.argv.includes('--reset')) {
-        await resetDatabase(client);
-        process.exit(0);
-    }
-});
+module.exports = {
+    name: 'reset',
+    async execute(message, args, client) {
+        if (message.author.id !== '1252982138656129148') {
+            return message.reply('You do not have permission to use this command.');
+        }
 
-module.exports = { resetDatabase };
+        await resetDatabase(client);
+        message.reply('Database has been reset.');
+    }
+};
