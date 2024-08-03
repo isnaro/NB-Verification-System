@@ -18,8 +18,11 @@ module.exports = {
         }
 
         const userId = args.shift();
-        const user = await message.guild.members.fetch(userId).catch(() => null);
+        if (!userId) {
+            return message.reply('Please provide a user ID.');
+        }
 
+        const user = await message.guild.members.fetch(userId).catch(() => null);
         if (!user) {
             return message.reply('User not found.');
         }
@@ -64,6 +67,21 @@ module.exports = {
             const moderatorId = message.author.id;
             const verificationDate = new Date();
 
+            // Ensure the moderator is in the database
+            let moderatorVerification = await Verification.findOne({ moderatorId });
+            if (!moderatorVerification) {
+                moderatorVerification = new Verification({
+                    moderatorId,
+                    counts: { day: 0, week: 0, month: 0, total: 0 }
+                });
+            }
+            // Increment the moderator's verification counts
+            moderatorVerification.counts.day++;
+            moderatorVerification.counts.week++;
+            moderatorVerification.counts.month++;
+            moderatorVerification.counts.total++;
+            await moderatorVerification.save();
+
             // Update or create verification for the user
             let userVerification = await Verification.findOne({ userId });
             if (!userVerification) {
@@ -84,21 +102,6 @@ module.exports = {
                 userVerification.counts.total++;
             }
             await userVerification.save();
-
-            // Ensure the moderator is in the database
-            let moderatorVerification = await Verification.findOne({ moderatorId });
-            if (!moderatorVerification) {
-                moderatorVerification = new Verification({
-                    moderatorId,
-                    counts: { day: 0, week: 0, month: 0, total: 0 }
-                });
-            }
-            // Increment the moderator's verification counts
-            moderatorVerification.counts.day++;
-            moderatorVerification.counts.week++;
-            moderatorVerification.counts.month++;
-            moderatorVerification.counts.total++;
-            await moderatorVerification.save();
 
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
