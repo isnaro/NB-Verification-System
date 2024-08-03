@@ -60,22 +60,32 @@ module.exports = {
                 assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
-            // Update verification counts in MongoDB
+            // Update verification counts in MongoDB for the moderator
             const moderatorId = message.author.id;
+            const verificationUpdate = {
+                $inc: { 'counts.day': 1, 'counts.week': 1, 'counts.month': 1, 'counts.total': 1 },
+                $set: { verificationDate: new Date() }
+            };
 
-            // Increment verification counts
-            const result = await Verification.updateOne(
+            await Verification.updateOne(
                 { moderatorId },
-                {
-                    $inc: { 'counts.day': 1, 'counts.week': 1, 'counts.month': 1, 'counts.total': 1 },
-                    $set: { verificationDate: new Date(), assignedRoles: assignedRolesMessage }
-                },
+                verificationUpdate,
                 { upsert: true }
             );
 
-            if (result.nModified === 0 && result.upsertedCount === 0) {
-                console.error('No documents were modified or upserted. Possible error.');
-            }
+            // Create or update the verification record for the user
+            await Verification.updateOne(
+                { userId },
+                {
+                    $set: {
+                        userId,
+                        moderatorId,
+                        verificationDate: new Date(),
+                        assignedRoles: assignedRolesMessage
+                    }
+                },
+                { upsert: true }
+            );
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
