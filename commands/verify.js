@@ -60,37 +60,46 @@ module.exports = {
                 assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
-            // Ensure the moderator is in the verification list
+            // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            await Verification.updateOne(
-                { moderatorId },
-                { 
-                    $setOnInsert: { counts: { day: 0, week: 0, month: 0, total: 0 } }
-                },
-                { upsert: true }
-            );
+            const verificationDate = new Date();
 
-            // Increment verification counts
-            await Verification.updateOne(
-                { moderatorId },
-                { $inc: { 'counts.day': 1, 'counts.week': 1, 'counts.month': 1, 'counts.total': 1 } }
-            );
+            // Update or create verification for the user
+            let userVerification = await Verification.findOne({ userId });
+            if (!userVerification) {
+                userVerification = new Verification({
+                    userId,
+                    moderatorId,
+                    verificationDate,
+                    assignedRoles: assignedRolesMessage,
+                    counts: { day: 1, week: 1, month: 1, total: 1 }
+                });
+            } else {
+                userVerification.moderatorId = moderatorId;
+                userVerification.verificationDate = verificationDate;
+                userVerification.assignedRoles = assignedRolesMessage;
+                userVerification.counts.day++;
+                userVerification.counts.week++;
+                userVerification.counts.month++;
+                userVerification.counts.total++;
+            }
+            await userVerification.save();
 
-            // Create or update the verification record for the user
-            await Verification.updateOne(
-                { userId: user.id },
-                {
-                    $set: {
-                        userId: user.id,
-                        moderatorId,
-                        verificationDate: new Date(),
-                        assignedRoles: assignedRolesMessage
-                    }
-                },
-                { upsert: true }
-            );
+            // Ensure the moderator is in the database
+            let moderatorVerification = await Verification.findOne({ moderatorId });
+            if (!moderatorVerification) {
+                moderatorVerification = new Verification({
+                    moderatorId,
+                    counts: { day: 0, week: 0, month: 0, total: 0 }
+                });
+            }
+            // Increment the moderator's verification counts
+            moderatorVerification.counts.day++;
+            moderatorVerification.counts.week++;
+            moderatorVerification.counts.month++;
+            moderatorVerification.counts.total++;
+            await moderatorVerification.save();
 
-            const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
@@ -101,7 +110,7 @@ module.exports = {
                 .addFields(
                     { name: 'Verified User', value: `${user.user.tag} (<@${user.id}>)` },
                     { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
-                    { name: 'Verification Date', value: verificationDate },
+                    { name: 'Verification Date', value: verificationDate.toISOString().split('T').join(' ').split('.')[0] },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
                     { name: 'Assigned Roles', value: assignedRolesMessage }
