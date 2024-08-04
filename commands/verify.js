@@ -62,31 +62,44 @@ module.exports = {
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            const verificationDate = new Date();
-            const joinDate = user.joinedAt;
-            const accountCreationDate = user.user.createdAt;
-
             let verification = await Verification.findOne({ userId });
 
             if (!verification) {
                 verification = new Verification({
                     userId,
                     moderatorId,
-                    verificationDate,
+                    verificationDate: new Date(),
                     assignedRoles: assignedRolesMessage,
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
-                verification.verificationDate = verificationDate;
+                verification.verificationDate = new Date();
                 verification.assignedRoles = assignedRolesMessage;
-                verification.counts.day++;
-                verification.counts.week++;
-                verification.counts.month++;
-                verification.counts.total++;
             }
 
             await verification.save();
+
+            // Update moderator verification counts
+            let moderatorVerification = await Verification.findOne({ moderatorId });
+
+            if (!moderatorVerification) {
+                moderatorVerification = new Verification({
+                    moderatorId,
+                    counts: { day: 1, week: 1, month: 1, total: 1 }
+                });
+            } else {
+                moderatorVerification.counts.day++;
+                moderatorVerification.counts.week++;
+                moderatorVerification.counts.month++;
+                moderatorVerification.counts.total++;
+            }
+
+            await moderatorVerification.save();
+
+            const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
             const verificationEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
@@ -95,9 +108,9 @@ module.exports = {
                 .addFields(
                     { name: 'Verified User', value: `${user.user.tag} (<@${user.id}>)` },
                     { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
-                    { name: 'Verification Date', value: moment(verificationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') },
-                    { name: 'Join Date', value: moment(joinDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') },
-                    { name: 'Account Creation Date', value: moment(accountCreationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') },
+                    { name: 'Verification Date', value: verificationDate },
+                    { name: 'Join Date', value: joinDate },
+                    { name: 'Account Creation Date', value: accountCreationDate },
                     { name: 'Assigned Roles', value: assignedRolesMessage }
                 )
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
@@ -106,7 +119,13 @@ module.exports = {
             const logChannel = client.channels.cache.get(config.logChannelId);
             logChannel.send({ embeds: [verificationEmbed] });
 
-            message.reply(`Successfully verified ${user.user.tag}. ${assignedRolesMessage}`);
+            const userReplyEmbed = new EmbedBuilder()
+                .setTitle('User Verified')
+                .setColor('#00FF00')
+                .setDescription(`Successfully verified ${user.user.tag}. ${assignedRolesMessage}`)
+                .setTimestamp();
+
+            message.reply({ embeds: [userReplyEmbed] });
         } catch (err) {
             console.error(err);
             message.reply('There was an error processing the verification.');
