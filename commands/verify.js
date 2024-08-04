@@ -111,19 +111,20 @@ module.exports = {
                     { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
-                    { name: 'Assigned Roles', value: assignedRolesMessage },
-                    { name: 'Message Link', value: `[Jump to Message](${message.url})` }
+                    { name: 'Assigned Roles', value: assignedRolesMessage }
                 )
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
             const logChannel = client.channels.cache.get(config.logChannelId);
-            logChannel.send({ embeds: [verificationEmbed] });
+            const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
+
+            const messageLink = `https://discord.com/channels/${message.guild.id}/${logChannel.id}/${logMessage.id}`;
 
             const userReplyEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#ADD8E6') // Light blue color
-                .setDescription(`Successfully verified <@${user.id}>. ${assignedRolesMessage}`)
+                .setDescription(`Successfully verified <@${user.id}>. ${assignedRolesMessage}\n[View Log Message](${messageLink})`)
                 .setTimestamp();
 
             message.reply({ embeds: [userReplyEmbed] });
