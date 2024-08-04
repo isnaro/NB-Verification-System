@@ -62,16 +62,17 @@ module.exports = {
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            let verification = await Verification.findOne({ userId: user.id });
+            const verification = await Verification.findOne({ userId: user.id });
 
             if (!verification) {
-                verification = new Verification({
+                const newVerification = new Verification({
                     userId: user.id,
                     moderatorId,
                     verificationDate: new Date(),
                     assignedRoles: assignedRolesMessage,
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
+                await newVerification.save();
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
@@ -80,9 +81,8 @@ module.exports = {
                 verification.counts.week++;
                 verification.counts.month++;
                 verification.counts.total++;
+                await verification.save();
             }
-            
-            await verification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
