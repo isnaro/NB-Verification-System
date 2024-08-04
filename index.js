@@ -12,10 +12,7 @@ const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 // Connect to MongoDB
 async function connectToDatabase() {
     if (mongoose.connection.readyState !== 1) {
-        await mongoose.connect(process.env.MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
     }
 }
@@ -26,9 +23,9 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.GuildVoiceStates,
     ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction]
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 client.commands = new Map();
@@ -83,8 +80,10 @@ client.on('messageCreate', async message => {
 // Voice state update event listener
 client.on('voiceStateUpdate', async (oldState, newState) => {
     // Check if the user joined one of the verification voice channels
-    if ((newState.channelId === config.verificationVcId || newState.channelId === config.verificationVcId2) 
-        && oldState.channelId !== newState.channelId) {
+    if (
+        (newState.channelId === config.verificationVcId || newState.channelId === config.verificationVcId2) &&
+        oldState.channelId !== newState.channelId
+    ) {
         const member = newState.member;
         // Check if the user has the non-verified role
         if (member.roles.cache.has(config.nonVerifiedRoleId)) {
