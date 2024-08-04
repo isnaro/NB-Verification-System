@@ -3,10 +3,10 @@ const Verification = require('./models/Verification');
 const config = require('./config.json');
 require('dotenv').config();
 
-async function resetDatabase() {
+async function resetDatabase(client) {
     try {
         // Connect to MongoDB
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
         console.log('Connected to MongoDB');
 
         // Drop the Verification collection
@@ -46,4 +46,4 @@ async function resetDatabase() {
     }
 }
 
-resetDatabase();
+module.exports = resetDatabase;
