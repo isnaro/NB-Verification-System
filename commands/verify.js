@@ -57,7 +57,7 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => `<@&${roleId}>`).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
@@ -122,7 +122,7 @@ module.exports = {
             const userReplyEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#00FF00')
-                .setDescription(`Successfully verified ${user.user.tag}. ${assignedRolesMessage}`)
+                .setDescription(`Successfully verified <@${user.id}>. ${assignedRolesMessage}`)
                 .setTimestamp();
 
             message.reply({ embeds: [userReplyEmbed] });
