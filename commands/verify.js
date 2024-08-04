@@ -111,7 +111,8 @@ module.exports = {
                     { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
-                    { name: 'Assigned Roles', value: assignedRolesMessage }
+                    { name: 'Assigned Roles', value: assignedRolesMessage },
+                    { name: 'Message Link', value: `[Jump to Message](${message.url})` }
                 )
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
