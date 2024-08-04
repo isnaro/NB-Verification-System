@@ -106,7 +106,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
             const notificationChannel = client.channels.cache.get(channelId); // Send the notification to the verification voice channel
             if (notificationChannel) {
-                notificationChannel.send({ content: `<@&${config.adminRoleId}>`, embeds: [embed] });
+                notificationChannel.send({ content: `<@&${config.adminRoleId}> Someone needs verification`, embeds: [embed] });
             }
         }
     }
