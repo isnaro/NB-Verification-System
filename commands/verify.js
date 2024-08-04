@@ -103,7 +103,7 @@ module.exports = {
 
             const verificationEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
-                .setColor('#00FF00')
+                .setColor('#ADD8E6') // Light blue color
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
                 .addFields(
                     { name: 'Verified User', value: `${user.user.tag} (<@${user.id}>)` },
@@ -121,7 +121,7 @@ module.exports = {
 
             const userReplyEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
-                .setColor('#00FF00')
+                .setColor('#ADD8E6') // Light blue color
                 .setDescription(`Successfully verified <@${user.id}>. ${assignedRolesMessage}`)
                 .setTimestamp();
 
