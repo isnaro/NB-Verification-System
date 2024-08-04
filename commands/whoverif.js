@@ -42,7 +42,8 @@ module.exports = {
                 { name: 'Join Date', value: joinDate },
                 { name: 'Account Creation Date', value: accountCreationDate },
                 { name: 'Assigned Roles', value: verification.assignedRoles || 'No roles assigned' },
-                { name: 'Log Message', value: `[View Log Message](${messageLink})` }
+                { name: 'Log Message', value: `[View Log Message](${messageLink})` },
+                { name: 'Message Link', value: `[Jump to Message](${messageLink})` }
             )
             .setFooter({ text: `Verified by ${moderator ? moderator.user.tag : 'Unknown'}`, iconURL: moderator ? moderator.user.displayAvatarURL({ dynamic: true }) : null })
             .setTimestamp();

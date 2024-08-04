@@ -1,8 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
-const stringSimilarity = require('string-similarity');
-const moment = require('moment-timezone');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
+const moment = require('moment-timezone');
 
 module.exports = {
     name: 'verify',
@@ -57,7 +56,7 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => `<@&${roleId}>`).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
@@ -77,7 +76,7 @@ module.exports = {
                 verification.verificationDate = new Date();
                 verification.assignedRoles = assignedRolesMessage;
             }
-
+            
             await verification.save();
 
             // Update moderator verification counts
@@ -119,15 +118,15 @@ module.exports = {
             const logChannel = client.channels.cache.get(config.logChannelId);
             const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
 
-            const messageLink = `https://discord.com/channels/${message.guild.id}/${logChannel.id}/${logMessage.id}`;
+            const messageLink = `[Jump to Message](https://discord.com/channels/${message.guild.id}/${logChannel.id}/${logMessage.id})`;
 
-            const userReplyEmbed = new EmbedBuilder()
-                .setTitle('User Verified')
-                .setColor('#ADD8E6') // Light blue color
-                .setDescription(`Successfully verified <@${user.id}>. ${assignedRolesMessage}\n[View Log Message](${messageLink})`)
-                .setTimestamp();
+            // Add the message link to the embed and send it in the original channel
+            verificationEmbed.addFields(
+                { name: 'Log Message', value: messageLink },
+                { name: 'Message Link', value: messageLink }
+            );
+            message.reply({ embeds: [verificationEmbed] });
 
-            message.reply({ embeds: [userReplyEmbed] });
         } catch (err) {
             console.error(err);
             message.reply('There was an error processing the verification.');
