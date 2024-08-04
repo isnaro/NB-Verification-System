@@ -2,6 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
 const moment = require('moment-timezone');
+const stringSimilarity = require('string-similarity');
 
 module.exports = {
     name: 'verify',
