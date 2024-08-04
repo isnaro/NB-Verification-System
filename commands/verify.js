@@ -57,7 +57,7 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).toString()).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
@@ -101,7 +101,7 @@ module.exports = {
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
-            const verificationEmbed = new EmbedBuilder()
+            const logEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#ADD8E6') // Light blue color
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
@@ -117,15 +117,19 @@ module.exports = {
                 .setTimestamp();
 
             const logChannel = client.channels.cache.get(config.logChannelId);
-            const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
+            const logMessage = await logChannel.send({ embeds: [logEmbed] });
 
-            const messageLink = `[Jump to Message](https://discord.com/channels/${message.guild.id}/${logChannel.id}/${logMessage.id})`;
+            const messageLink = `https://discord.com/channels/${message.guild.id}/${logChannel.id}/${logMessage.id}`;
 
-            // Add the message link to the embed and send it in the original channel
-            verificationEmbed.addFields(
-                { name: 'Log Message', value: messageLink },
-                { name: 'Message Link', value: messageLink }
-            );
+            const verificationEmbed = new EmbedBuilder()
+                .setTitle('User Verified')
+                .setColor('#ADD8E6') // Light blue color
+                .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
+                .addFields(
+                    { name: 'View Log Message', value: `[Click Here](${messageLink})` }
+                )
+                .setTimestamp();
+
             message.reply({ embeds: [verificationEmbed] });
 
         } catch (err) {
