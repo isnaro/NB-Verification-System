@@ -1,8 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
+const stringSimilarity = require('string-similarity');
+const moment = require('moment-timezone');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
-const moment = require('moment-timezone');
-const stringSimilarity = require('string-similarity');
 
 module.exports = {
     name: 'verify',
@@ -57,7 +57,7 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).toString()).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
@@ -70,22 +70,18 @@ module.exports = {
                     moderatorId,
                     verificationDate: new Date(),
                     assignedRoles: assignedRolesMessage,
-                    counts: { day: 1, week: 1, month: 1, total: 1 }
+                    counts: { day: 0, week: 0, month: 0, total: 0 } // Initialize counts to zero
                 });
-            } else {
-                verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
-                verification.verificationDate = new Date();
-                verification.assignedRoles = assignedRolesMessage;
             }
-            
+
             await verification.save();
 
             // Update moderator verification counts
-            let moderatorVerification = await Verification.findOne({ moderatorId });
+            let moderatorVerification = await Verification.findOne({ userId: moderatorId });
 
             if (!moderatorVerification) {
                 moderatorVerification = new Verification({
-                    moderatorId,
+                    userId: moderatorId,
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
             } else {
@@ -101,13 +97,13 @@ module.exports = {
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
-            const logEmbed = new EmbedBuilder()
+            const verificationEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#ADD8E6') // Light blue color
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: 'Verified User', value: `${user.user.tag} (<@${user.id}>)` },
-                    { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
+                    { name: 'Verified User', value: `${user ? `${user.user.tag} (<@${user.id}>)` : userId}` },
+                    { name: 'Moderator', value: `${message.author ? `${message.author.tag} (<@${message.author.id}>)` : 'Unknown'}` },
                     { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
@@ -117,20 +113,14 @@ module.exports = {
                 .setTimestamp();
 
             const logChannel = client.channels.cache.get(config.logChannelId);
-            const logMessage = await logChannel.send({ embeds: [logEmbed] });
-
-            const messageLink = `https://discord.com/channels/${message.guild.id}/${logChannel.id}/${logMessage.id}`;
-
-            const verificationEmbed = new EmbedBuilder()
-                .setTitle('User Verified')
-                .setColor('#ADD8E6') // Light blue color
-                .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
-                .addFields(
-                    { name: 'View Log Message', value: `[Click Here](${messageLink})` }
-                )
-                .setTimestamp();
-
-            message.reply({ embeds: [verificationEmbed] });
+            if (logChannel) {
+                const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
+                const messageLink = `https://discord.com/channels/${logChannel.guild.id}/${logChannel.id}/${logMessage.id}`;
+                verificationEmbed.addFields(
+                    { name: 'Log Message', value: `[View Log Message](${messageLink})` }
+                );
+                message.reply({ embeds: [verificationEmbed] });
+            }
 
         } catch (err) {
             console.error(err);
