@@ -57,53 +57,46 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => `<@&${roleId}>`).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            let verification = await Verification.findOne({ userId });
+            let verification = await Verification.findOne({ userId: user.id });
 
             if (!verification) {
                 verification = new Verification({
-                    userId,
+                    userId: user.id,
                     moderatorId,
                     verificationDate: new Date(),
                     assignedRoles: assignedRolesMessage,
-                    counts: { day: 0, week: 0, month: 0, total: 0 } // Initialize counts to zero
-                });
-            }
-
-            await verification.save();
-
-            // Update moderator verification counts
-            let moderatorVerification = await Verification.findOne({ userId: moderatorId });
-
-            if (!moderatorVerification) {
-                moderatorVerification = new Verification({
-                    userId: moderatorId,
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
             } else {
-                moderatorVerification.counts.day++;
-                moderatorVerification.counts.week++;
-                moderatorVerification.counts.month++;
-                moderatorVerification.counts.total++;
+                verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
+                verification.verificationDate = new Date();
+                verification.assignedRoles = assignedRolesMessage;
+                verification.counts.day++;
+                verification.counts.week++;
+                verification.counts.month++;
+                verification.counts.total++;
             }
-
-            await moderatorVerification.save();
+            
+            await verification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
-            const verificationEmbed = new EmbedBuilder()
+            // Send the verification log message to the log channel
+            const logChannel = client.channels.cache.get(config.logChannelId);
+            const logEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
-                .setColor('#ADD8E6') // Light blue color
+                .setColor('#00FF00')
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: 'Verified User', value: `${user ? `${user.user.tag} (<@${user.id}>)` : userId}` },
-                    { name: 'Moderator', value: `${message.author ? `${message.author.tag} (<@${message.author.id}>)` : 'Unknown'}` },
+                    { name: 'Verified User', value: `${user.user.tag} (<@${user.id}>)` },
+                    { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
                     { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
@@ -112,16 +105,20 @@ module.exports = {
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
-            const logChannel = client.channels.cache.get(config.logChannelId);
-            if (logChannel) {
-                const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
-                const messageLink = `https://discord.com/channels/${logChannel.guild.id}/${logChannel.id}/${logMessage.id}`;
-                verificationEmbed.addFields(
-                    { name: 'Log Message', value: `[View Log Message](${messageLink})` }
-                );
-                message.reply({ embeds: [verificationEmbed] });
-            }
+            const logMessage = await logChannel.send({ embeds: [logEmbed] });
+            const logMessageLink = `https://discord.com/channels/${logMessage.guild.id}/${logMessage.channel.id}/${logMessage.id}`;
 
+            // Send the verification success message to the command channel
+            const successEmbed = new EmbedBuilder()
+                .setTitle('User Verified')
+                .setColor('#00BFFF') // Light blue color
+                .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
+                .addFields(
+                    { name: 'View Log Message', value: `[Click Here](${logMessageLink})` }
+                )
+                .setTimestamp();
+
+            message.reply({ embeds: [successEmbed] });
         } catch (err) {
             console.error(err);
             message.reply('There was an error processing the verification.');
