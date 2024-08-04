@@ -10,11 +10,15 @@ require('./anticrash'); // Import anticrash.js
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-    console.log('Connected to MongoDB');
-}).catch(err => {
-    console.error('Failed to connect to MongoDB', err);
-});
+async function connectToDatabase() {
+    if (mongoose.connection.readyState !== 1) {
+        await mongoose.connect(process.env.MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        console.log('Connected to MongoDB');
+    }
+}
 
 const client = new Client({
     intents: [
@@ -36,8 +40,9 @@ for (const file of commandFiles) {
     client.commands.set(command.name, command);
 }
 
-client.once('ready', () => {
+client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
+    await connectToDatabase(); // Ensure database connection
     keepAlive(); // Call the keepAlive function
 });
 
@@ -52,6 +57,7 @@ client.on('messageCreate', async message => {
         const command = client.commands.get('verify');
         if (command) {
             try {
+                await connectToDatabase(); // Ensure database connection
                 await command.execute(message, args, client);
             } catch (error) {
                 console.error(error);
@@ -64,6 +70,7 @@ client.on('messageCreate', async message => {
         const command = client.commands.get(commandName);
         if (command) {
             try {
+                await connectToDatabase(); // Ensure database connection
                 await command.execute(message, args, client);
             } catch (error) {
                 console.error(error);
