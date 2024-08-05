@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
+const moment = require('moment-timezone');
 
 module.exports = {
     name: 'top',
@@ -18,13 +19,31 @@ module.exports = {
         }
 
         try {
-            // Aggregate verifications by moderatorId
+            const now = moment().tz('Africa/Algiers');
+            let startOfTimeFrame;
+
+            if (timeFrame === 'day') {
+                startOfTimeFrame = now.startOf('day');
+            } else if (timeFrame === 'week') {
+                startOfTimeFrame = now.startOf('week');
+            } else if (timeFrame === 'month') {
+                startOfTimeFrame = now.startOf('month');
+            } else {
+                startOfTimeFrame = null;
+            }
+
+            const matchStage = startOfTimeFrame ? { verificationDate: { $gte: startOfTimeFrame.toDate() } } : {};
+
             const aggregation = await Verification.aggregate([
+                { $match: matchStage },
                 {
                     $group: {
                         _id: "$moderatorId",
-                        count: { $sum: `$counts.${timeFrame}` }
+                        count: { $sum: 1 }
                     }
+                },
+                {
+                    $match: { count: { $gt: 0 } }
                 },
                 {
                     $sort: { count: -1 }
