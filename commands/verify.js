@@ -1,43 +1,47 @@
 const { EmbedBuilder } = require('discord.js');
+const stringSimilarity = require('string-similarity');
 const moment = require('moment-timezone');
 const Verification = require('../models/Verification');
-const stringSimilarity = require('string-similarity');
+const config = require('../config.json');
 
 module.exports = {
     name: 'verify',
-    async execute(message, args) {
-        const loadingMessage = await message.reply('<a:loadingnb:1270196992747896893> Loading...');
-
+    async execute(message, args, client) {
         // Check if the user has one of the allowed roles
-        if (!message.member.roles.cache.some(role => ['812318686936825867', '952275776303149176'].includes(role.id))) {
-            return loadingMessage.edit('You do not have permission to use this command.');
+        if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
+            return message.reply('You do not have permission to use this command.');
+        }
+
+        // Check if the command is used in the allowed channel
+        if (message.channel.id !== config.allowedChannelId) {
+            return message.reply(`This command only works in <#${config.allowedChannelId}>.`);
         }
 
         const userId = args.shift();
         const user = await message.guild.members.fetch(userId).catch(() => null);
 
         if (!user) {
-            return loadingMessage.edit('User not found.');
+            return message.reply('User not found.');
         }
 
         // Check if the user has the "non-verified" role
-        if (!user.roles.cache.has('862862160156426300')) {
-            return loadingMessage.edit('This user is already verified.');
+        if (!user.roles.cache.has(config.nonVerifiedRoleId)) {
+            return message.reply('This user is already verified.');
         }
 
         const age = parseInt(args.find(arg => !isNaN(arg)));
         let ageRole;
         if (age >= 15 && age <= 17) {
-            ageRole = '801160166712148020';
+            ageRole = config.roles["15 - 17 YO"];
         } else if (age >= 18 && age <= 24) {
-            ageRole = '952260704679886859';
+            ageRole = config.roles["18 - 24 YO"];
         } else if (age >= 25 && age <= 30) {
-            ageRole = '952260851207925810';
+            ageRole = config.roles["25 - 30 YO"];
         }
 
         const otherRoles = args.filter(arg => isNaN(arg)).map(role => {
-            const matchedRole = getClosestRole(role.trim().toLowerCase(), message.guild.roles.cache);
-            return matchedRole ? matchedRole.id : null;
+            const matchedRole = getClosestRoleName(role.trim().toLowerCase(), config.roles);
+            return matchedRole ? config.roles[matchedRole] : null;
         }).filter(Boolean);
 
         if (ageRole) {
@@ -45,42 +49,55 @@ module.exports = {
         }
 
         // Always add the "Giveaways" and "Events" roles
-        otherRoles.push('809166576989372466', '801187769179308062');
+        otherRoles.push(config.roles.Giveaways, config.roles.Events);
 
         try {
-            await user.roles.remove('862862160156426300');
+            await user.roles.remove(config.nonVerifiedRoleId);
 
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => `<@&${roleId}>`).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            const verificationDate = new Date();
+            const verification = await Verification.findOne({ userId: user.id });
 
-            const newVerification = new Verification({
-                userId: user.id,
-                moderatorId,
-                verificationDate,
-                assignedRoles: assignedRolesMessage,
-                counts: { day: 1, week: 1, month: 1, total: 1 }
-            });
+            if (!verification) {
+                const newVerification = new Verification({
+                    userId: user.id,
+                    moderatorId,
+                    verificationDate: new Date(),
+                    assignedRoles: assignedRolesMessage,
+                    counts: { day: 1, week: 1, month: 1, total: 1 }
+                });
+                await newVerification.save();
+            } else {
+                verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
+                verification.verificationDate = new Date();
+                verification.assignedRoles = assignedRolesMessage;
+                verification.counts.day++;
+                verification.counts.week++;
+                verification.counts.month++;
+                verification.counts.total++;
+                await verification.save();
+            }
 
-            await newVerification.save();
-
+            const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
-            const embed = new EmbedBuilder()
+            // Send the verification log message to the log channel
+            const logChannel = client.channels.cache.get(config.logChannelId);
+            const logEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#00FF00')
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
                 .addFields(
                     { name: 'Verified User', value: `${user.user.tag} (<@${user.id}>)` },
                     { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
-                    { name: 'Verification Date', value: moment(verificationDate).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss') },
+                    { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
                     { name: 'Assigned Roles', value: assignedRolesMessage }
@@ -88,29 +105,32 @@ module.exports = {
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
-            const logChannel = client.channels.cache.get('1254231233630834788');
-            const logMessage = await logChannel.send({ embeds: [embed] });
+            const logMessage = await logChannel.send({ embeds: [logEmbed] });
+            const logMessageLink = `https://discord.com/channels/${logMessage.guild.id}/${logMessage.channel.id}/${logMessage.id}`;
 
-            const responseEmbed = new EmbedBuilder()
+            // Send the verification success message to the command channel
+            const successEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
-                .setColor('#00FF00')
+                .setColor('#00BFFF') // Light blue color
                 .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
-                .addFields({ name: 'View Log Message', value: `[Click Here](${logMessage.url})` })
+                .addFields(
+                    { name: 'View Log Message', value: `[Click Here](${logMessageLink})` }
+                )
                 .setTimestamp();
 
-            await loadingMessage.edit({ content: '', embeds: [responseEmbed] });
+            message.reply({ embeds: [successEmbed] });
         } catch (err) {
             console.error(err);
-            loadingMessage.edit('There was an error processing the verification.');
+            message.reply('There was an error processing the verification.');
         }
     }
 };
 
-function getClosestRole(roleName, allRoles) {
-    const roleNames = allRoles.map(role => role.name);
-    const matches = stringSimilarity.findBestMatch(roleName, roleNames);
+function getClosestRoleName(input, roles) {
+    const roleNames = Object.keys(roles);
+    const matches = stringSimilarity.findBestMatch(input, roleNames);
     if (matches.bestMatch.rating >= 0.6) {
-        return allRoles.find(role => role.name === matches.bestMatch.target);
+        return matches.bestMatch.target;
     }
     return null;
 }
