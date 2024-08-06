@@ -48,10 +48,11 @@ client.on('messageCreate', async message => {
 
     const content = message.content.slice(config.prefix.length).trim();
     const args = content.split(/ +/);
+    const commandName = args.shift().toLowerCase();
 
-    // Check if the first argument is a number for the verify command
-    if (!isNaN(args[0])) {
-        const command = client.commands.get('verify');
+    // Check if the command is either 'v' or 'r'
+    if (commandName === 'v' || commandName === 'r') {
+        const command = client.commands.get(commandName === 'v' ? 'verify' : 'role');
         if (command) {
             try {
                 await connectToDatabase(); // Ensure database connection
@@ -63,7 +64,7 @@ client.on('messageCreate', async message => {
                     message.delete().catch(console.error);
                     return;
                 }
-                await command.execute(message, args, client);
+                await command.execute(message, [commandName, ...args], client);
             } catch (error) {
                 console.error(error);
                 message.reply('There was an error executing that command.');
@@ -71,20 +72,11 @@ client.on('messageCreate', async message => {
         }
     } else {
         // Handle other commands
-        const commandName = args.shift().toLowerCase();
         const command = client.commands.get(commandName);
         if (command) {
             try {
                 await connectToDatabase(); // Ensure database connection
-                if (message.channel.id !== config.allowedChannelId) {
-                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
-                    setTimeout(() => {
-                        reply.delete().catch(console.error);
-                    }, 5000);
-                    message.delete().catch(console.error);
-                    return;
-                }
-                await command.execute(message, args, client);
+                await command.execute(message, [commandName, ...args], client);
             } catch (error) {
                 console.error(error);
                 message.reply('There was an error executing that command.');
