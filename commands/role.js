@@ -1,5 +1,6 @@
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const stringSimilarity = require('string-similarity');
+const config = require('../config.json'); // Make sure to include the config
 
 module.exports = {
     name: 'role',
