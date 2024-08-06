@@ -1,11 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
-const config = require('../config.json');  // Ensure config is imported
+const config = require('../config.json');
+const stringSimilarity = require('string-similarity');
 
 module.exports = {
     name: 'role',
-    async execute(message, args, client) {
-        // Check if the user has one of the allowed roles
+    async execute(message, args) {
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
             return message.reply('You do not have permission to use this command.');
         }
@@ -18,34 +18,36 @@ module.exports = {
         }
 
         // Check if the user is verified
-        const verification = await Verification.findOne({ userId: user.id });
+        const verification = await Verification.findOne({ userId });
         if (!verification) {
-            return message.reply('This user is not verified. Please verify the member first.');
+            return message.reply('The specified user is not verified. Please verify the user first.');
         }
 
-        // Get the roles to be assigned
-        const rolesToAssign = args.map(roleName => 
-            message.guild.roles.cache.find(role => role.name.toLowerCase() === roleName.toLowerCase())
-        ).filter(Boolean);
+        const roleNames = args.map(roleName => roleName.trim().toLowerCase());
+        const allRoles = message.guild.roles.cache.map(role => role.name.toLowerCase());
+        const roles = roleNames.map(roleName => {
+            let bestMatch = stringSimilarity.findBestMatch(roleName, allRoles).bestMatch.target;
+            return message.guild.roles.cache.find(role => role.name.toLowerCase() === bestMatch);
+        }).filter(role => role !== undefined);
 
-        if (!rolesToAssign.length) {
+        if (roles.length === 0) {
             return message.reply('No valid roles specified.');
         }
 
         try {
-            await user.roles.add(rolesToAssign);
+            await user.roles.add(roles);
+            const assignedRolesMessage = roles.map(role => role.name).join(', ');
 
-            const assignedRolesMessage = rolesToAssign.map(role => role.name).join(', ');
             const embed = new EmbedBuilder()
                 .setTitle('Roles Assigned')
                 .setColor('#00FF00')
-                .setDescription(`Successfully assigned roles to ${user}: ${assignedRolesMessage}`)
+                .setDescription(`Successfully assigned roles to <@${user.id}>: ${assignedRolesMessage}`)
                 .setTimestamp();
 
             message.reply({ embeds: [embed] });
         } catch (error) {
-            console.error(error);
-            message.reply('There was an error executing that command.');
+            console.error('Error assigning roles:', error);
+            message.reply('There was an error assigning the roles.');
         }
-    }
+    },
 };
