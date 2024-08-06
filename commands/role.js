@@ -36,6 +36,19 @@ module.exports = {
             return message.reply('No valid roles specified.');
         }
 
+        // Check if the bot has permission to manage roles
+        if (!message.guild.me.permissions.has('MANAGE_ROLES')) {
+            return message.reply('I do not have permission to manage roles.');
+        }
+
+        // Check if the bot's highest role is higher than the roles it's trying to assign
+        const botHighestRole = message.guild.me.roles.highest.position;
+        for (const role of validRoles) {
+            if (role.position >= botHighestRole) {
+                return message.reply(`I cannot assign the role ${role.name} because it is higher or equal to my highest role.`);
+            }
+        }
+
         try {
             await user.roles.add(validRoles);
 
