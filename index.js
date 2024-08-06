@@ -46,6 +46,9 @@ client.once('ready', async () => {
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
+    const content = message.content.slice(config.prefix.length).trim();
+    const args = content.split(/ +/);
+
     // Special handling for the role command
     if (message.content.startsWith('r ')) {
         const args = message.content.slice(2).trim().split(/ +/);
@@ -53,6 +56,14 @@ client.on('messageCreate', async message => {
         if (command) {
             try {
                 await connectToDatabase(); // Ensure database connection
+                if (message.channel.id !== config.allowedChannelId) {
+                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
+                    setTimeout(() => {
+                        reply.delete().catch(console.error);
+                    }, 5000);
+                    message.delete().catch(console.error);
+                    return;
+                }
                 await command.execute(message, args, client);
             } catch (error) {
                 console.error(error);
@@ -88,11 +99,18 @@ client.on('messageCreate', async message => {
 
     if (!message.content.startsWith(config.prefix)) return;
 
-    const content = message.content.slice(config.prefix.length).trim();
-    const args = content.split(/ +/);
     const commandName = args.shift().toLowerCase();
 
-    // Handle other commands
+    // Handle other commands, ensure they only work in the specific channel
+    if (message.channel.id !== '800545663125422100') {
+        const reply = await message.reply('This command only works in <#800545663125422100>.');
+        setTimeout(() => {
+            reply.delete().catch(console.error);
+        }, 5000);
+        message.delete().catch(console.error);
+        return;
+    }
+
     const command = client.commands.get(commandName);
     if (command) {
         try {
