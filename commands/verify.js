@@ -1,31 +1,27 @@
 const { EmbedBuilder } = require('discord.js');
-const stringSimilarity = require('string-similarity');
-const moment = require('moment-timezone');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
+const moment = require('moment-timezone');
+const stringSimilarity = require('string-similarity');
 
 module.exports = {
     name: 'verify',
-    async execute(message, args, client) {
-        // Check if the user has one of the allowed roles
+    async execute(message, args, client, loadingMessage) {
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
+            await loadingMessage.delete();
             return message.reply('You do not have permission to use this command.');
-        }
-
-        // Check if the command is used in the allowed channel
-        if (message.channel.id !== config.allowedChannelId) {
-            return message.reply(`This command only works in <#${config.allowedChannelId}>.`);
         }
 
         const userId = args.shift();
         const user = await message.guild.members.fetch(userId).catch(() => null);
 
         if (!user) {
+            await loadingMessage.delete();
             return message.reply('User not found.');
         }
 
-        // Check if the user has the "non-verified" role
         if (!user.roles.cache.has(config.nonVerifiedRoleId)) {
+            await loadingMessage.delete();
             return message.reply('This user is already verified.');
         }
 
@@ -57,22 +53,21 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => `<@&${roleId}>`).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            const verification = await Verification.findOne({ userId: user.id });
+            let verification = await Verification.findOne({ userId });
 
             if (!verification) {
-                const newVerification = new Verification({
-                    userId: user.id,
+                verification = new Verification({
+                    userId,
                     moderatorId,
                     verificationDate: new Date(),
                     assignedRoles: assignedRolesMessage,
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
-                await newVerification.save();
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
@@ -81,16 +76,15 @@ module.exports = {
                 verification.counts.week++;
                 verification.counts.month++;
                 verification.counts.total++;
-                await verification.save();
             }
+            
+            await verification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
-            // Send the verification log message to the log channel
-            const logChannel = client.channels.cache.get(config.logChannelId);
-            const logEmbed = new EmbedBuilder()
+            const verificationEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#00FF00')
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
@@ -105,22 +99,23 @@ module.exports = {
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
-            const logMessage = await logChannel.send({ embeds: [logEmbed] });
-            const logMessageLink = `https://discord.com/channels/${logMessage.guild.id}/${logMessage.channel.id}/${logMessage.id}`;
+            const logChannel = client.channels.cache.get(config.logChannelId);
+            const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
 
-            // Send the verification success message to the command channel
-            const successEmbed = new EmbedBuilder()
+            const replyEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
-                .setColor('#00BFFF') // Light blue color
+                .setColor('#00FF00')
                 .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
                 .addFields(
-                    { name: 'View Log Message', value: `[Click Here](${logMessageLink})` }
+                    { name: 'View Log Message', value: `[Click Here](${logMessage.url})` }
                 )
                 .setTimestamp();
 
-            message.reply({ embeds: [successEmbed] });
+            await loadingMessage.delete();
+            message.reply({ embeds: [replyEmbed] });
         } catch (err) {
             console.error(err);
+            await loadingMessage.delete();
             message.reply('There was an error processing the verification.');
         }
     }

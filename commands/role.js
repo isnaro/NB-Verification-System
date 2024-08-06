@@ -1,12 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
-const config = require('../config.json');
 const stringSimilarity = require('string-similarity');
 
 module.exports = {
     name: 'role',
-    async execute(message, args) {
+    async execute(message, args, client, loadingMessage) {
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
+            await loadingMessage.delete();
             return message.reply('You do not have permission to use this command.');
         }
 
@@ -14,12 +14,14 @@ module.exports = {
         const user = await message.guild.members.fetch(userId).catch(() => null);
 
         if (!user) {
+            await loadingMessage.delete();
             return message.reply('User not found.');
         }
 
         // Check if the user is verified
         const verification = await Verification.findOne({ userId });
         if (!verification) {
+            await loadingMessage.delete();
             return message.reply('The specified user is not verified. Please verify the user first.');
         }
 
@@ -31,6 +33,7 @@ module.exports = {
         }).filter(role => role !== undefined);
 
         if (roles.length === 0) {
+            await loadingMessage.delete();
             return message.reply('No valid roles specified.');
         }
 
@@ -44,9 +47,11 @@ module.exports = {
                 .setDescription(`Successfully assigned roles to <@${user.id}>: ${assignedRolesMessage}`)
                 .setTimestamp();
 
+            await loadingMessage.delete();
             message.reply({ embeds: [embed] });
         } catch (error) {
             console.error('Error assigning roles:', error);
+            await loadingMessage.delete();
             message.reply('There was an error assigning the roles.');
         }
     },

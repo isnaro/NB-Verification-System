@@ -47,14 +47,16 @@ client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
     const content = message.content.slice(config.prefix.length).trim();
-    const args = content.split(/ +/);
+    const args = message.content.trim().split(/ +/);
 
-    // Special handling for the role command
-    if (message.content.startsWith('r ')) {
-        const args = message.content.slice(2).trim().split(/ +/);
-        const command = client.commands.get('role');
+    const isRoleCommand = message.content.startsWith('r ');
+    const isVerifyCommand = message.content.startsWith('v ');
+
+    if (isRoleCommand || isVerifyCommand) {
+        const command = client.commands.get(isRoleCommand ? 'role' : 'verify');
         if (command) {
             try {
+                const loadingMessage = await message.reply('<a:loadingnb:1270196992747896893> Loading...');
                 await connectToDatabase(); // Ensure database connection
                 if (message.channel.id !== config.allowedChannelId) {
                     const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
@@ -62,33 +64,10 @@ client.on('messageCreate', async message => {
                         reply.delete().catch(console.error);
                     }, 2500);
                     message.delete().catch(console.error);
+                    await loadingMessage.delete();
                     return;
                 }
-                await command.execute(message, args, client);
-            } catch (error) {
-                console.error(error);
-                message.reply('There was an error executing that command.');
-            }
-        }
-        return;
-    }
-
-    // Special handling for the verify command
-    if (message.content.startsWith('v ')) {
-        const args = message.content.slice(2).trim().split(/ +/);
-        const command = client.commands.get('verify');
-        if (command) {
-            try {
-                await connectToDatabase(); // Ensure database connection
-                if (message.channel.id !== config.allowedChannelId) {
-                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
-                    setTimeout(() => {
-                        reply.delete().catch(console.error);
-                    }, 2500);
-                    message.delete().catch(console.error);
-                    return;
-                }
-                await command.execute(message, args, client);
+                await command.execute(message, args.slice(1), client, loadingMessage);
             } catch (error) {
                 console.error(error);
                 message.reply('There was an error executing that command.');
@@ -114,8 +93,9 @@ client.on('messageCreate', async message => {
     const command = client.commands.get(commandName);
     if (command) {
         try {
+            const loadingMessage = await message.reply('<a:loadingnb:1270196992747896893> Loading...');
             await connectToDatabase(); // Ensure database connection
-            await command.execute(message, args, client);
+            await command.execute(message, args, client, loadingMessage);
         } catch (error) {
             console.error(error);
             message.reply('There was an error executing that command.');
