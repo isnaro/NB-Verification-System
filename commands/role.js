@@ -1,6 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
-const config = require('../config.json');
 
 module.exports = {
     name: 'role',
@@ -20,27 +19,25 @@ module.exports = {
         // Check if the user is verified
         const verification = await Verification.findOne({ userId });
         if (!verification) {
-            return message.reply('This user is not verified. Please verify the member first using the command `v <user-id>`.');
+            return message.reply('This user is not verified. Please verify the user first.');
         }
 
-        // Assign roles to the user
-        const rolesToAssign = args.map(role => {
-            const roleObj = message.guild.roles.cache.find(r => r.name.toLowerCase() === role.toLowerCase());
-            return roleObj ? roleObj.id : null;
+        const rolesToAdd = args.map(roleName => {
+            const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase());
+            return role ? role.id : null;
         }).filter(Boolean);
 
-        if (rolesToAssign.length === 0) {
+        if (rolesToAdd.length === 0) {
             return message.reply('No valid roles specified.');
         }
 
         try {
-            await user.roles.add(rolesToAssign);
-            const assignedRolesMessage = rolesToAssign.map(roleId => `<@&${roleId}>`).join(', ');
-
-            message.reply(`Successfully assigned roles to ${user.user.tag}: ${assignedRolesMessage}`);
+            await user.roles.add(rolesToAdd);
+            const assignedRolesMessage = rolesToAdd.map(roleId => `<@&${roleId}>`).join(', ');
+            message.reply(`Successfully assigned roles to <@${user.id}>: ${assignedRolesMessage}`);
         } catch (err) {
             console.error(err);
-            message.reply('There was an error assigning the roles.');
+            message.reply('There was an error assigning roles.');
         }
     }
 };

@@ -60,7 +60,7 @@ client.on('messageCreate', async message => {
                     const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
                     setTimeout(() => {
                         reply.delete().catch(console.error);
-                    }, 5000);
+                    }, 2500);
                     message.delete().catch(console.error);
                     return;
                 }
@@ -84,7 +84,7 @@ client.on('messageCreate', async message => {
                     const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
                     setTimeout(() => {
                         reply.delete().catch(console.error);
-                    }, 5000);
+                    }, 2500);
                     message.delete().catch(console.error);
                     return;
                 }
@@ -106,7 +106,7 @@ client.on('messageCreate', async message => {
         const reply = await message.reply('This command only works in <#800545663125422100>.');
         setTimeout(() => {
             reply.delete().catch(console.error);
-        }, 5000);
+        }, 2500);
         message.delete().catch(console.error);
         return;
     }
