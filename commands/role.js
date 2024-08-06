@@ -1,16 +1,9 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const stringSimilarity = require('string-similarity');
-const fs = require('fs');
-const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
 module.exports = {
     name: 'role',
     async execute(message, args) {
-        // Check if the user has one of the allowed roles
-        if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
-            return message.reply('You do not have permission to use this command.');
-        }
-
         const userId = args.shift();
         const user = await message.guild.members.fetch(userId).catch(() => null);
 
@@ -39,7 +32,7 @@ module.exports = {
         }
 
         // Check if the bot has permission to manage roles
-        if (!message.guild.members.me.permissions.has('MANAGE_ROLES')) {
+        if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
             return message.reply('I do not have permission to manage roles.');
         }
 
