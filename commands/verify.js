@@ -1,7 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
-const moment = require('moment-timezone');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
+const moment = require('moment-timezone');
+const stringSimilarity = require('string-similarity');
 
 module.exports = {
     name: 'verify',
@@ -34,34 +35,21 @@ module.exports = {
         }
 
         const age = parseInt(args.find(arg => !isNaN(arg)));
-        let ageRole;
-        if (age < 17) {
-            // Ban the user for being underage
-            const banDuration = 17 - age; // Calculate ban duration in years
-            const banEndDate = moment().add(banDuration, 'years').toDate();
-            await user.ban({ reason: 'Underage', days: 0 });
-
-            // Send a ban report
-            const banReportChannel = client.channels.cache.get('914984046646415470');
-            const embed = new EmbedBuilder()
-                .setTitle('User Banned for Underage')
-                .setColor('#FF0000')
-                .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
-                .addFields(
-                    { name: 'Banned User', value: `${user.user.tag} (<@${user.id}>)` },
-                    { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
-                    { name: 'Ban Duration', value: `${banDuration} years` },
-                    { name: 'Reason', value: 'Underage (required age: 17)' }
-                )
-                .setFooter({ text: `Banned by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
-                .setTimestamp();
-
-            banReportChannel.send({ embeds: [embed] });
-
-            return message.reply(`${user.user.tag} is banned for ${banDuration} years for being underage. Required age: 17`);
+        if (!age || age < 15) {
+            return message.reply(`Invalid age specified or age is too young.`);
         }
 
-        if (age >= 17 && age <= 24) {
+        const requiredAge = 17;
+        if (age < requiredAge) {
+            const banDuration = requiredAge - age;
+            await user.ban({ reason: `Underage. Banned for ${banDuration} years.` });
+            return message.reply(`${user.user.tag} is banned for ${banDuration} years for being underage. Required age: ${requiredAge}`);
+        }
+
+        let ageRole;
+        if (age >= 15 && age <= 17) {
+            ageRole = config.roles["15 - 17 YO"];
+        } else if (age >= 18 && age <= 24) {
             ageRole = config.roles["18 - 24 YO"];
         } else if (age >= 25 && age <= 30) {
             ageRole = config.roles["25 - 30 YO"];
@@ -104,13 +92,26 @@ module.exports = {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
                 verification.assignedRoles = assignedRolesMessage;
-                verification.counts.day++;
-                verification.counts.week++;
-                verification.counts.month++;
-                verification.counts.total++;
+            }
+            
+            await verification.save();
+
+            // Update moderator verification counts
+            let moderatorVerification = await Verification.findOne({ moderatorId });
+
+            if (!moderatorVerification) {
+                moderatorVerification = new Verification({
+                    moderatorId,
+                    counts: { day: 1, week: 1, month: 1, total: 1 }
+                });
+            } else {
+                moderatorVerification.counts.day++;
+                moderatorVerification.counts.week++;
+                moderatorVerification.counts.month++;
+                moderatorVerification.counts.total++;
             }
 
-            await verification.save();
+            await moderatorVerification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
@@ -132,12 +133,23 @@ module.exports = {
                 .setTimestamp();
 
             const logChannel = client.channels.cache.get(config.logChannelId);
-            logChannel.send({ embeds: [verificationEmbed] });
+            const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
+
+            const replyEmbed = new EmbedBuilder()
+                .setTitle('User Verified')
+                .setColor('#00FF00')
+                .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
+                .addFields(
+                    { name: 'View Log Message', value: `[Click Here](${logMessage.url})` }
+                )
+                .setTimestamp();
+
+            loadingMessage.edit({ content: null, embeds: [replyEmbed] });
 
             message.reply(`Successfully verified ${user.user.tag}. ${assignedRolesMessage}`);
         } catch (err) {
             console.error(err);
-            message.reply('There was an error processing the verification.');
+            loadingMessage.edit('There was an error processing the verification.');
         }
     }
 };
