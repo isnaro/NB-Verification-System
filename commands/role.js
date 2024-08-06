@@ -17,28 +17,34 @@ module.exports = {
         }
 
         // Check if the user is verified
-        const verification = await Verification.findOne({ userId });
+        const verification = await Verification.findOne({ userId: user.id });
         if (!verification) {
-            return message.reply('This user is not verified. Please verify the user first.');
+            return message.reply('This user is not verified. Please verify the member first.');
         }
 
-        const roleNames = args.join(' ').split(',').map(role => role.trim());
+        // Get the roles to be assigned
+        const rolesToAssign = args.map(roleName => 
+            message.guild.roles.cache.find(role => role.name.toLowerCase() === roleName.toLowerCase())
+        ).filter(Boolean);
 
-        const roles = roleNames.map(roleName => {
-            const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase());
-            return role ? role.id : null;
-        }).filter(Boolean);
-
-        if (roles.length === 0) {
+        if (!rolesToAssign.length) {
             return message.reply('No valid roles specified.');
         }
 
         try {
-            await user.roles.add(roles);
-            message.reply(`Successfully assigned roles to ${user.user.tag}: ${roles.map(roleId => `<@&${roleId}>`).join(', ')}`);
-        } catch (err) {
-            console.error(err);
-            message.reply('There was an error assigning roles.');
+            await user.roles.add(rolesToAssign);
+
+            const assignedRolesMessage = rolesToAssign.map(role => role.name).join(', ');
+            const embed = new EmbedBuilder()
+                .setTitle('Roles Assigned')
+                .setColor('#00FF00')
+                .setDescription(`Successfully assigned roles to ${user}: ${assignedRolesMessage}`)
+                .setTimestamp();
+
+            message.reply({ embeds: [embed] });
+        } catch (error) {
+            console.error(error);
+            message.reply('There was an error executing that command.');
         }
     }
 };
