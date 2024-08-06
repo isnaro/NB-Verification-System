@@ -1,8 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
+const stringSimilarity = require('string-similarity');
+const moment = require('moment-timezone');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
-const moment = require('moment-timezone');
-const stringSimilarity = require('string-similarity');
 
 module.exports = {
     name: 'verify',
@@ -14,12 +14,7 @@ module.exports = {
 
         // Check if the command is used in the allowed channel
         if (message.channel.id !== config.allowedChannelId) {
-            const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
-            setTimeout(() => {
-                reply.delete().catch(console.error);
-            }, 2500);
-            message.delete().catch(console.error);
-            return;
+            return message.reply(`This command only works in <#${config.allowedChannelId}>.`);
         }
 
         const userId = args.shift();
@@ -35,17 +30,6 @@ module.exports = {
         }
 
         const age = parseInt(args.find(arg => !isNaN(arg)));
-        if (!age || age < 15) {
-            return message.reply(`Invalid age specified or age is too young.`);
-        }
-
-        const requiredAge = 17;
-        if (age < requiredAge) {
-            const banDuration = requiredAge - age;
-            await user.ban({ reason: `Underage. Banned for ${banDuration} years.` });
-            return message.reply(`${user.user.tag} is banned for ${banDuration} years for being underage. Required age: ${requiredAge}`);
-        }
-
         let ageRole;
         if (age >= 15 && age <= 17) {
             ageRole = config.roles["15 - 17 YO"];
@@ -73,51 +57,40 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => `<@&${roleId}>`).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            let verification = await Verification.findOne({ userId });
+            const verification = await Verification.findOne({ userId: user.id });
 
             if (!verification) {
-                verification = new Verification({
-                    userId,
+                const newVerification = new Verification({
+                    userId: user.id,
                     moderatorId,
                     verificationDate: new Date(),
                     assignedRoles: assignedRolesMessage,
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
+                await newVerification.save();
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
                 verification.assignedRoles = assignedRolesMessage;
+                verification.counts.day++;
+                verification.counts.week++;
+                verification.counts.month++;
+                verification.counts.total++;
+                await verification.save();
             }
-            
-            await verification.save();
-
-            // Update moderator verification counts
-            let moderatorVerification = await Verification.findOne({ moderatorId });
-
-            if (!moderatorVerification) {
-                moderatorVerification = new Verification({
-                    moderatorId,
-                    counts: { day: 1, week: 1, month: 1, total: 1 }
-                });
-            } else {
-                moderatorVerification.counts.day++;
-                moderatorVerification.counts.week++;
-                moderatorVerification.counts.month++;
-                moderatorVerification.counts.total++;
-            }
-
-            await moderatorVerification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
-            const verificationEmbed = new EmbedBuilder()
+            // Send the verification log message to the log channel
+            const logChannel = client.channels.cache.get(config.logChannelId);
+            const logEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#00FF00')
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
@@ -132,24 +105,23 @@ module.exports = {
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
-            const logChannel = client.channels.cache.get(config.logChannelId);
-            const logMessage = await logChannel.send({ embeds: [verificationEmbed] });
+            const logMessage = await logChannel.send({ embeds: [logEmbed] });
+            const logMessageLink = `https://discord.com/channels/${logMessage.guild.id}/${logMessage.channel.id}/${logMessage.id}`;
 
-            const replyEmbed = new EmbedBuilder()
+            // Send the verification success message to the command channel
+            const successEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
-                .setColor('#00FF00')
+                .setColor('#00BFFF') // Light blue color
                 .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
                 .addFields(
-                    { name: 'View Log Message', value: `[Click Here](${logMessage.url})` }
+                    { name: 'View Log Message', value: `[Click Here](${logMessageLink})` }
                 )
                 .setTimestamp();
 
-            loadingMessage.edit({ content: null, embeds: [replyEmbed] });
-
-            message.reply(`Successfully verified ${user.user.tag}. ${assignedRolesMessage}`);
+            message.reply({ embeds: [successEmbed] });
         } catch (err) {
             console.error(err);
-            loadingMessage.edit('There was an error processing the verification.');
+            message.reply('There was an error processing the verification.');
         }
     }
 };
