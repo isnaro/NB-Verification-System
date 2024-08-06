@@ -44,15 +44,33 @@ client.once('ready', async () => {
 });
 
 client.on('messageCreate', async message => {
-    if (message.author.bot || !message.content.startsWith(config.prefix)) return;
+    if (message.author.bot) return;
+
+    // Special handling for the role command
+    if (message.content.startsWith('r ')) {
+        const args = message.content.slice(2).trim().split(/ +/);
+        const command = client.commands.get('role');
+        if (command) {
+            try {
+                await connectToDatabase(); // Ensure database connection
+                await command.execute(message, args, client);
+            } catch (error) {
+                console.error(error);
+                message.reply('There was an error executing that command.');
+            }
+        }
+        return;
+    }
+
+    if (!message.content.startsWith(config.prefix)) return;
 
     const content = message.content.slice(config.prefix.length).trim();
     const args = content.split(/ +/);
     const commandName = args.shift().toLowerCase();
 
     // Check if the command is either 'v' or 'r'
-    if (commandName === 'v' || commandName === 'r') {
-        const command = client.commands.get(commandName === 'v' ? 'verify' : 'role');
+    if (commandName === 'v' || commandName === 'top' || commandName === 'myverif' || commandName === 'whoverif') {
+        const command = client.commands.get(commandName === 'v' ? 'verify' : commandName);
         if (command) {
             try {
                 await connectToDatabase(); // Ensure database connection
