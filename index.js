@@ -62,15 +62,10 @@ client.on('messageCreate', async message => {
         return;
     }
 
-    if (!message.content.startsWith(config.prefix)) return;
-
-    const content = message.content.slice(config.prefix.length).trim();
-    const args = content.split(/ +/);
-    const commandName = args.shift().toLowerCase();
-
-    // Check if the command is either 'v' or 'r'
-    if (commandName === 'v' || commandName === 'top' || commandName === 'myverif' || commandName === 'whoverif') {
-        const command = client.commands.get(commandName === 'v' ? 'verify' : commandName);
+    // Special handling for the verify command
+    if (message.content.startsWith('v ')) {
+        const args = message.content.slice(2).trim().split(/ +/);
+        const command = client.commands.get('verify');
         if (command) {
             try {
                 await connectToDatabase(); // Ensure database connection
@@ -82,23 +77,30 @@ client.on('messageCreate', async message => {
                     message.delete().catch(console.error);
                     return;
                 }
-                await command.execute(message, [commandName, ...args], client);
+                await command.execute(message, args, client);
             } catch (error) {
                 console.error(error);
                 message.reply('There was an error executing that command.');
             }
         }
-    } else {
-        // Handle other commands
-        const command = client.commands.get(commandName);
-        if (command) {
-            try {
-                await connectToDatabase(); // Ensure database connection
-                await command.execute(message, [commandName, ...args], client);
-            } catch (error) {
-                console.error(error);
-                message.reply('There was an error executing that command.');
-            }
+        return;
+    }
+
+    if (!message.content.startsWith(config.prefix)) return;
+
+    const content = message.content.slice(config.prefix.length).trim();
+    const args = content.split(/ +/);
+    const commandName = args.shift().toLowerCase();
+
+    // Handle other commands
+    const command = client.commands.get(commandName);
+    if (command) {
+        try {
+            await connectToDatabase(); // Ensure database connection
+            await command.execute(message, args, client);
+        } catch (error) {
+            console.error(error);
+            message.reply('There was an error executing that command.');
         }
     }
 });
