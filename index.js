@@ -46,75 +46,30 @@ client.once('ready', async () => {
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
-    const content = message.content.slice(config.prefix.length).trim();
+    const content = message.content.trim();
     const args = content.split(/ +/);
-
-    // Special handling for the role command
-    if (message.content.startsWith('r ')) {
-        const args = message.content.slice(2).trim().split(/ +/);
-        const command = client.commands.get('role');
-        if (command) {
-            try {
-                await connectToDatabase(); // Ensure database connection
-                if (message.channel.id !== config.allowedChannelId) {
-                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
-                    setTimeout(() => {
-                        reply.delete().catch(console.error);
-                    }, 2500);
-                    message.delete().catch(console.error);
-                    return;
-                }
-                await command.execute(message, args, client);
-            } catch (error) {
-                console.error(error);
-                message.reply('There was an error executing that command.');
-            }
-        }
-        return;
-    }
-
-    // Special handling for the verify command
-    if (message.content.startsWith('v ')) {
-        const args = message.content.slice(2).trim().split(/ +/);
-        const command = client.commands.get('verify');
-        if (command) {
-            try {
-                await connectToDatabase(); // Ensure database connection
-                if (message.channel.id !== config.allowedChannelId) {
-                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
-                    setTimeout(() => {
-                        reply.delete().catch(console.error);
-                    }, 2500);
-                    message.delete().catch(console.error);
-                    return;
-                }
-                await command.execute(message, args, client);
-            } catch (error) {
-                console.error(error);
-                message.reply('There was an error executing that command.');
-            }
-        }
-        return;
-    }
-
-    if (!message.content.startsWith(config.prefix)) return;
-
     const commandName = args.shift().toLowerCase();
 
-    // Handle other commands, ensure they only work in the specific channel
-    if (message.channel.id !== '800545663125422100') {
-        const reply = await message.reply('This command only works in <#800545663125422100>.');
-        setTimeout(() => {
-            reply.delete().catch(console.error);
-        }, 2500);
-        message.delete().catch(console.error);
-        return;
-    }
+    const specialCommands = {
+        'r': 'role',
+        'v': 'verify'
+    };
 
-    const command = client.commands.get(commandName);
+    const commandKey = specialCommands[commandName] || commandName;
+    const command = client.commands.get(commandKey);
+
     if (command) {
         try {
             await connectToDatabase(); // Ensure database connection
+            const allowedChannelId = (commandKey === 'role' || commandKey === 'verify') ? config.allowedChannelId : '800545663125422100';
+
+            if (message.channel.id !== allowedChannelId) {
+                const reply = await message.reply(`This command only works in <#${allowedChannelId}>`);
+                setTimeout(() => reply.delete().catch(console.error), 2500);
+                message.delete().catch(console.error);
+                return;
+            }
+            
             await command.execute(message, args, client);
         } catch (error) {
             console.error(error);
@@ -125,17 +80,15 @@ client.on('messageCreate', async message => {
 
 // Voice state update event listener
 client.on('voiceStateUpdate', async (oldState, newState) => {
-    // Check if the user joined one of the verification voice channels
     if (
         (newState.channelId === config.verificationVcId || newState.channelId === config.verificationVcId2) &&
         oldState.channelId !== newState.channelId
     ) {
         const member = newState.member;
-        // Check if the user has the non-verified role
         if (member.roles.cache.has(config.nonVerifiedRoleId)) {
-            const channelId = newState.channelId; // Get the ID of the channel the user joined
-            const joinDate = moment(member.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
-            const accountCreationDate = moment(member.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const channelId = newState.channelId;
+            const joinDate = moment(member.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss');
+            const accountCreationDate = moment(member.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss');
             const embed = new EmbedBuilder()
                 .setTitle('User Needs Verification')
                 .setColor('#FF0000')
@@ -149,7 +102,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
                 .setFooter({ text: 'Verification Required', iconURL: member.user.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
-            const notificationChannel = client.channels.cache.get(channelId); // Send the notification to the verification voice channel
+            const notificationChannel = client.channels.cache.get(config.notificationChannelId);
             if (notificationChannel) {
                 notificationChannel.send({ content: `<@&${config.adminRoleId}> Someone needs verification`, embeds: [embed] });
             }

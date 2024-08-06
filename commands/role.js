@@ -1,6 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
-const config = require('../config.json'); // Add this line
 
 module.exports = {
     name: 'role',
@@ -23,19 +22,20 @@ module.exports = {
             return message.reply('This user is not verified. Please verify the user first.');
         }
 
-        const rolesToAdd = args.map(roleName => {
+        const roleNames = args.join(' ').split(',').map(role => role.trim());
+
+        const roles = roleNames.map(roleName => {
             const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase());
             return role ? role.id : null;
         }).filter(Boolean);
 
-        if (rolesToAdd.length === 0) {
+        if (roles.length === 0) {
             return message.reply('No valid roles specified.');
         }
 
         try {
-            await user.roles.add(rolesToAdd);
-            const assignedRolesMessage = rolesToAdd.map(roleId => `<@&${roleId}>`).join(', ');
-            message.reply(`Successfully assigned roles to <@${user.id}>: ${assignedRolesMessage}`);
+            await user.roles.add(roles);
+            message.reply(`Successfully assigned roles to ${user.user.tag}: ${roles.map(roleId => `<@&${roleId}>`).join(', ')}`);
         } catch (err) {
             console.error(err);
             message.reply('There was an error assigning roles.');
