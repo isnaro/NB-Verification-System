@@ -55,6 +55,14 @@ client.on('messageCreate', async message => {
         if (command) {
             try {
                 await connectToDatabase(); // Ensure database connection
+                if (message.channel.id !== config.allowedChannelId) {
+                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
+                    setTimeout(() => {
+                        reply.delete().catch(console.error);
+                    }, 5000);
+                    message.delete().catch(console.error);
+                    return;
+                }
                 await command.execute(message, args, client);
             } catch (error) {
                 console.error(error);
@@ -68,6 +76,14 @@ client.on('messageCreate', async message => {
         if (command) {
             try {
                 await connectToDatabase(); // Ensure database connection
+                if (message.channel.id !== config.allowedChannelId) {
+                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
+                    setTimeout(() => {
+                        reply.delete().catch(console.error);
+                    }, 5000);
+                    message.delete().catch(console.error);
+                    return;
+                }
                 await command.execute(message, args, client);
             } catch (error) {
                 console.error(error);
