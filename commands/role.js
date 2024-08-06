@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const Verification = require('../models/Verification');
+const config = require('../config.json'); // Add this line
 
 module.exports = {
     name: 'role',
