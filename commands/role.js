@@ -4,8 +4,10 @@ const stringSimilarity = require('string-similarity');
 module.exports = {
     name: 'role',
     async execute(message, args) {
+        const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+
         // Check if the user has one of the allowed roles
-        if (!message.member.roles.cache.some(role => ['812318686936825867', '952275776303149176'].includes(role.id))) {
+        if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
             return message.reply('You do not have permission to use this command.');
         }
 
@@ -17,7 +19,7 @@ module.exports = {
         }
 
         // Check if the user is verified
-        if (user.roles.cache.has('862862160156426300')) {
+        if (user.roles.cache.has(config.nonVerifiedRoleId)) {
             return message.reply('This user is not verified. Please verify them first.');
         }
 
@@ -37,12 +39,12 @@ module.exports = {
         }
 
         // Check if the bot has permission to manage roles
-        if (!message.guild.me.permissions.has('MANAGE_ROLES')) {
+        if (!message.guild.members.me.permissions.has('MANAGE_ROLES')) {
             return message.reply('I do not have permission to manage roles.');
         }
 
         // Check if the bot's highest role is higher than the roles it's trying to assign
-        const botHighestRole = message.guild.me.roles.highest.position;
+        const botHighestRole = message.guild.members.me.roles.highest.position;
         for (const role of validRoles) {
             if (role.position >= botHighestRole) {
                 return message.reply(`I cannot assign the role ${role.name} because it is higher or equal to my highest role.`);
