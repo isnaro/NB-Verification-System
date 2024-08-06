@@ -1,5 +1,4 @@
 const { EmbedBuilder } = require('discord.js');
-const stringSimilarity = require('string-similarity');
 const moment = require('moment-timezone');
 const Verification = require('../models/Verification');
 const config = require('../config.json');
@@ -14,7 +13,12 @@ module.exports = {
 
         // Check if the command is used in the allowed channel
         if (message.channel.id !== config.allowedChannelId) {
-            return message.reply(`This command only works in <#${config.allowedChannelId}>.`);
+            const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
+            setTimeout(() => {
+                reply.delete().catch(console.error);
+            }, 2500);
+            message.delete().catch(console.error);
+            return;
         }
 
         const userId = args.shift();
@@ -31,9 +35,33 @@ module.exports = {
 
         const age = parseInt(args.find(arg => !isNaN(arg)));
         let ageRole;
-        if (age >= 15 && age <= 17) {
-            ageRole = config.roles["15 - 17 YO"];
-        } else if (age >= 18 && age <= 24) {
+        if (age < 17) {
+            // Ban the user for being underage
+            const banDuration = 17 - age; // Calculate ban duration in years
+            const banEndDate = moment().add(banDuration, 'years').toDate();
+            await user.ban({ reason: 'Underage', days: 0 });
+
+            // Send a ban report
+            const banReportChannel = client.channels.cache.get('914984046646415470');
+            const embed = new EmbedBuilder()
+                .setTitle('User Banned for Underage')
+                .setColor('#FF0000')
+                .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
+                .addFields(
+                    { name: 'Banned User', value: `${user.user.tag} (<@${user.id}>)` },
+                    { name: 'Moderator', value: `${message.author.tag} (<@${message.author.id}>)` },
+                    { name: 'Ban Duration', value: `${banDuration} years` },
+                    { name: 'Reason', value: 'Underage (required age: 17)' }
+                )
+                .setFooter({ text: `Banned by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
+                .setTimestamp();
+
+            banReportChannel.send({ embeds: [embed] });
+
+            return message.reply(`${user.user.tag} is banned for ${banDuration} years for being underage. Required age: 17`);
+        }
+
+        if (age >= 17 && age <= 24) {
             ageRole = config.roles["18 - 24 YO"];
         } else if (age >= 25 && age <= 30) {
             ageRole = config.roles["25 - 30 YO"];
@@ -57,22 +85,21 @@ module.exports = {
             let assignedRolesMessage = 'No roles assigned';
             if (otherRoles.length) {
                 await user.roles.add(otherRoles);
-                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => `<@&${roleId}>`).join(', ')}`;
+                assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
-            const verification = await Verification.findOne({ userId: user.id });
+            let verification = await Verification.findOne({ userId });
 
             if (!verification) {
-                const newVerification = new Verification({
-                    userId: user.id,
+                verification = new Verification({
+                    userId,
                     moderatorId,
                     verificationDate: new Date(),
                     assignedRoles: assignedRolesMessage,
                     counts: { day: 1, week: 1, month: 1, total: 1 }
                 });
-                await newVerification.save();
             } else {
                 verification.moderatorId = moderatorId; // Update the moderatorId if the userId already exists
                 verification.verificationDate = new Date();
@@ -81,16 +108,15 @@ module.exports = {
                 verification.counts.week++;
                 verification.counts.month++;
                 verification.counts.total++;
-                await verification.save();
             }
+
+            await verification.save();
 
             const verificationDate = moment().tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const joinDate = moment(user.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
             const accountCreationDate = moment(user.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
 
-            // Send the verification log message to the log channel
-            const logChannel = client.channels.cache.get(config.logChannelId);
-            const logEmbed = new EmbedBuilder()
+            const verificationEmbed = new EmbedBuilder()
                 .setTitle('User Verified')
                 .setColor('#00FF00')
                 .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
@@ -105,20 +131,10 @@ module.exports = {
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
-            const logMessage = await logChannel.send({ embeds: [logEmbed] });
-            const logMessageLink = `https://discord.com/channels/${logMessage.guild.id}/${logMessage.channel.id}/${logMessage.id}`;
+            const logChannel = client.channels.cache.get(config.logChannelId);
+            logChannel.send({ embeds: [verificationEmbed] });
 
-            // Send the verification success message to the command channel
-            const successEmbed = new EmbedBuilder()
-                .setTitle('User Verified')
-                .setColor('#00BFFF') // Light blue color
-                .setDescription(`Successfully verified <@${user.id}>. Assigned roles: ${assignedRolesMessage}`)
-                .addFields(
-                    { name: 'View Log Message', value: `[Click Here](${logMessageLink})` }
-                )
-                .setTimestamp();
-
-            message.reply({ embeds: [successEmbed] });
+            message.reply(`Successfully verified ${user.user.tag}. ${assignedRolesMessage}`);
         } catch (err) {
             console.error(err);
             message.reply('There was an error processing the verification.');

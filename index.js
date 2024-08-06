@@ -46,10 +46,7 @@ client.once('ready', async () => {
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
-    const content = message.content.slice(config.prefix.length).trim();
-    const args = content.split(/ +/);
-
-    // Special handling for the role command
+    // Handle the role command without prefix
     if (message.content.startsWith('r ')) {
         const args = message.content.slice(2).trim().split(/ +/);
         const command = client.commands.get('role');
@@ -73,7 +70,7 @@ client.on('messageCreate', async message => {
         return;
     }
 
-    // Special handling for the verify command
+    // Handle the verify command without prefix
     if (message.content.startsWith('v ')) {
         const args = message.content.slice(2).trim().split(/ +/);
         const command = client.commands.get('verify');
@@ -97,8 +94,11 @@ client.on('messageCreate', async message => {
         return;
     }
 
+    // Handle other commands with prefix
     if (!message.content.startsWith(config.prefix)) return;
 
+    const content = message.content.slice(config.prefix.length).trim();
+    const args = content.split(/ +/);
     const commandName = args.shift().toLowerCase();
 
     // Handle other commands, ensure they only work in the specific channel
