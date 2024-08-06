@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const moment = require('moment-timezone');
 const keepAlive = require('./keep_alive'); // Import keep_alive.js
 require('./anticrash'); // Import anticrash.js
-const resetDatabase = require('./resetDatabase'); // Import resetDatabase function
 
 // Load the configuration file
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
@@ -13,7 +12,7 @@ const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 // Connect to MongoDB
 async function connectToDatabase() {
     if (mongoose.connection.readyState !== 1) {
-        await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+        await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
     }
 }
