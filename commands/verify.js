@@ -118,7 +118,7 @@ module.exports = {
                 .setColor('#00FF00')
                 .setDescription(`Successfully verified <@${user.id}>. ${assignedRolesMessage}`)
                 .addFields(
-                    { name: 'Log Message', value: `[View Log Message](${logMessage.url})` }
+                    { name: 'Log Report', value: `[View Log Report](${logMessage.url})` }
                 )
                 .setTimestamp();
 
