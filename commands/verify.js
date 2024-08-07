@@ -53,8 +53,8 @@ module.exports = {
         }
 
         const otherRoles = args.filter(arg => isNaN(arg)).map(role => {
-            const matchedRole = getClosestRoleName(role.trim().toLowerCase(), config.roles);
-            return matchedRole ? config.roles[matchedRole] : null;
+            const matchedRole = getClosestRoleName(role.trim().toLowerCase(), message.guild.roles.cache);
+            return matchedRole ? matchedRole.id : null;
         }).filter(Boolean);
 
         if (ageRole) {
@@ -111,7 +111,9 @@ module.exports = {
                     { name: 'Verification Date', value: verificationDate },
                     { name: 'Join Date', value: joinDate },
                     { name: 'Account Creation Date', value: accountCreationDate },
-                    { name: 'Assigned Roles', value: assignedRolesMessage }
+                    { name: 'Assigned Roles', value: assignedRolesMessage },
+                    { name: 'Message Link', value: `[Jump to Message](${message.url})` }
+
                 )
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
@@ -124,8 +126,7 @@ module.exports = {
                 .setColor('#00FF00')
                 .setDescription(`Successfully verified <@${user.id}>. ${assignedRolesMessage}`)
                 .addFields(
-                    { name: 'Log Message', value: `[View Log Message](${logMessage.url})` },
-                    { name: 'Message Link', value: `[Jump to Message](${message.url})` }
+                    { name: 'Log Message', value: `[View Log Message](${logMessage.url})` }
                 )
                 .setTimestamp();
 
@@ -138,10 +139,10 @@ module.exports = {
 };
 
 function getClosestRoleName(input, roles) {
-    const roleNames = Object.keys(roles);
+    const roleNames = Array.from(roles.values()).map(role => role.name.toLowerCase());
     const matches = stringSimilarity.findBestMatch(input, roleNames);
     if (matches.bestMatch.rating >= 0.6) {
-        return matches.bestMatch.target;
+        return roles.find(role => role.name.toLowerCase() === matches.bestMatch.target);
     }
     return null;
 }
