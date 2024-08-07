@@ -9,24 +9,16 @@ module.exports = {
     async execute(message, args, client) {
         // Check if the user has one of the allowed roles
         if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
-            return message.reply('You do not have permission to use this command.');
+            return;
         }
 
         // Check if the command is used in the allowed channel
         if (message.channel.id !== config.allowedChannelId) {
-            if (!message.member.roles.cache.some(role => config.allowedRoles.includes(role.id))) {
-                const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
-                setTimeout(() => {
-                    reply.delete().catch(console.error);
-                }, 2500);
-                message.delete().catch(console.error);
-            } else {
-                const reply = await message.reply('This command only works in the designated verification channel.');
-                setTimeout(() => {
-                    reply.delete().catch(console.error);
-                }, 2500);
-                message.delete().catch(console.error);
-            }
+            const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
+            setTimeout(() => {
+                reply.delete().catch(console.error);
+            }, 2500);
+            message.delete().catch(console.error);
             return;
         }
 
@@ -46,6 +38,7 @@ module.exports = {
         let ageRole;
         if (age && age < 17) {
             return message.reply('User is underage. I am unable to verify the user. Must be at least 17 years old. Please use the ban command to ban the user or report it to staff <#914984046646415470>.');
+        } else if (age >= 17 && age <= 24) {
         } else if (age >= 17 && age <= 24) {
             ageRole = config.roles["18 - 24 YO"];
         } else if (age >= 25 && age <= 30) {
@@ -113,7 +106,6 @@ module.exports = {
                     { name: 'Account Creation Date', value: accountCreationDate },
                     { name: 'Assigned Roles', value: assignedRolesMessage },
                     { name: 'Message Link', value: `[Jump to Message](${message.url})` }
-
                 )
                 .setFooter({ text: `Verified by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
