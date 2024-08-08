@@ -67,6 +67,9 @@ module.exports = {
                 assignedRolesMessage = `Assigned roles: ${otherRoles.map(roleId => message.guild.roles.cache.get(roleId).name).join(', ')}`;
             }
 
+            // Send the loading emoji
+            const loadingMessage = await message.channel.send('<a:loadingnb:1271226695537524847>');
+
             // Update verification counts in MongoDB
             const moderatorId = message.author.id;
             let verification = await Verification.findOne({ userId });
@@ -123,7 +126,8 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            await message.reply({ embeds: [replyEmbed] });
+            // Edit the loading message to the embed
+            await loadingMessage.edit({ content: '', embeds: [replyEmbed] });
         } catch (err) {
             console.error(err);
             message.reply('There was an error processing the verification.');
