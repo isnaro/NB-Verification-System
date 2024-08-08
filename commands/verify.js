@@ -38,8 +38,9 @@ module.exports = {
         let ageRole;
         if (age && age < 17) {
             return message.reply('User is underage. I am unable to verify the user. Must be at least 17 years old. Please use the ban command to ban the user or report it to staff <#914984046646415470>.');
-        } else if (age >= 17 && age <= 24) {
-        } else if (age >= 17 && age <= 24) {
+        } else if (age === 17) {
+            ageRole = config.roles["15 - 17 YO"];
+        } else if (age >= 18 && age <= 24) {
             ageRole = config.roles["18 - 24 YO"];
         } else if (age >= 25 && age <= 30) {
             ageRole = config.roles["25 - 30 YO"];
