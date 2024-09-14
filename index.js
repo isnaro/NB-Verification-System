@@ -3,8 +3,8 @@ const fs = require('fs');
 require('dotenv').config();
 const mongoose = require('mongoose');
 const moment = require('moment-timezone');
-const keepAlive = require('./keep_alive'); // Import keep_alive.js
-require('./anticrash'); // Import anticrash.js
+const keepAlive = require('./keep_alive');
+require('./anticrash');
 
 // Load the configuration file
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
@@ -39,12 +39,16 @@ for (const file of commandFiles) {
 
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
-    await connectToDatabase(); // Ensure database connection
-    keepAlive(); // Call the keepAlive function
+    await connectToDatabase();
+    keepAlive();
 });
 
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
+
+    // Check if the user has required roles to use commands
+    const allowedRoles = ['952275776303149176', '812318686936825867'];
+    if (!message.member.roles.cache.some(role => allowedRoles.includes(role.id))) return;
 
     const content = message.content.slice(config.prefix.length).trim();
     const args = content.split(/ +/);
@@ -55,7 +59,7 @@ client.on('messageCreate', async message => {
         const command = client.commands.get('role');
         if (command) {
             try {
-                await connectToDatabase(); // Ensure database connection
+                await connectToDatabase();
                 if (message.channel.id !== config.allowedChannelId) {
                     const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
                     setTimeout(() => {
@@ -79,7 +83,7 @@ client.on('messageCreate', async message => {
         const command = client.commands.get('verify');
         if (command) {
             try {
-                await connectToDatabase(); // Ensure database connection
+                await connectToDatabase();
                 if (message.channel.id !== config.allowedChannelId) {
                     const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
                     setTimeout(() => {
@@ -114,7 +118,7 @@ client.on('messageCreate', async message => {
     const command = client.commands.get(commandName);
     if (command) {
         try {
-            await connectToDatabase(); // Ensure database connection
+            await connectToDatabase();
             await command.execute(message, args, client);
         } catch (error) {
             console.error(error);
@@ -125,17 +129,15 @@ client.on('messageCreate', async message => {
 
 // Voice state update event listener
 client.on('voiceStateUpdate', async (oldState, newState) => {
-    // Check if the user joined one of the verification voice channels
     if (
         (newState.channelId === config.verificationVcId || newState.channelId === config.verificationVcId2) &&
         oldState.channelId !== newState.channelId
     ) {
         const member = newState.member;
-        // Check if the user has the non-verified role
         if (member.roles.cache.has(config.nonVerifiedRoleId)) {
-            const channelId = newState.channelId; // Get the ID of the channel the user joined
-            const joinDate = moment(member.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
-            const accountCreationDate = moment(member.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss'); // GMT+1
+            const channelId = newState.channelId;
+            const joinDate = moment(member.joinedAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss');
+            const accountCreationDate = moment(member.user.createdAt).tz('Africa/Algiers').format('YYYY-MM-DD HH:mm:ss');
             const embed = new EmbedBuilder()
                 .setTitle('User Needs Verification')
                 .setColor('#FF0000')
@@ -149,7 +151,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
                 .setFooter({ text: 'Verification Required', iconURL: member.user.displayAvatarURL({ dynamic: true }) })
                 .setTimestamp();
 
-            const notificationChannel = client.channels.cache.get(channelId); // Send the notification to the verification voice channel
+            const notificationChannel = client.channels.cache.get(channelId);
             if (notificationChannel) {
                 notificationChannel.send({ content: `<@&${config.adminRoleId}> Someone needs verification`, embeds: [embed] });
             }
