@@ -46,35 +46,15 @@ client.once('ready', async () => {
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
-    const content = message.content.slice(config.prefix.length).trim();
-    const args = content.split(/ +/);
+    // Check if the user has one of the allowed roles for 'verify' or 'role' commands
+    const hasAllowedRole = message.member.roles.cache.some(role => config.allowedRoles.includes(role.id));
 
-    // Special handling for the role command
-    if (message.content.startsWith('r ')) {
-        const args = message.content.slice(2).trim().split(/ +/);
-        const command = client.commands.get('role');
-        if (command) {
-            try {
-                await connectToDatabase(); // Ensure database connection
-                if (message.channel.id !== config.allowedChannelId) {
-                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
-                    setTimeout(() => {
-                        reply.delete().catch(console.error);
-                    }, 2500);
-                    message.delete().catch(console.error);
-                    return;
-                }
-                await command.execute(message, args, client);
-            } catch (error) {
-                console.error(error);
-                message.reply('There was an error executing that command.');
-            }
-        }
-        return;
-    }
-
-    // Special handling for the verify command
+    // Handle 'v ' commands (verify)
     if (message.content.startsWith('v ')) {
+        if (!hasAllowedRole) {
+            return; // Ignore if the user doesn't have permission
+        }
+
         const args = message.content.slice(2).trim().split(/ +/);
         const command = client.commands.get('verify');
         if (command) {
@@ -97,6 +77,35 @@ client.on('messageCreate', async message => {
         return;
     }
 
+    // Handle 'r ' commands (roles)
+    if (message.content.startsWith('r ')) {
+        if (!hasAllowedRole) {
+            return; // Ignore if the user doesn't have permission
+        }
+
+        const args = message.content.slice(2).trim().split(/ +/);
+        const command = client.commands.get('role');
+        if (command) {
+            try {
+                await connectToDatabase(); // Ensure database connection
+                if (message.channel.id !== config.allowedChannelId) {
+                    const reply = await message.reply(`This command only works in <#${config.allowedChannelId}>`);
+                    setTimeout(() => {
+                        reply.delete().catch(console.error);
+                    }, 2500);
+                    message.delete().catch(console.error);
+                    return;
+                }
+                await command.execute(message, args, client);
+            } catch (error) {
+                console.error(error);
+                message.reply('There was an error executing that command.');
+            }
+        }
+        return;
+    }
+
+    // All other commands
     if (!message.content.startsWith(config.prefix)) return;
 
     const commandName = args.shift().toLowerCase();
