@@ -3,13 +3,13 @@ const fs = require('fs');
 require('dotenv').config();
 const mongoose = require('mongoose');
 const moment = require('moment-timezone');
-const keepAlive = require('./keep_alive');
-require('./anticrash');
+const keepAlive = require('./keep_alive'); // Import the keep_alive file
+require('./anticrash'); // Import the anticrash file
 
 // Load the configuration file
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
-// MongoDB Connection
+// Connect to MongoDB
 async function connectToDatabase() {
     if (mongoose.connection.readyState !== 1) {
         await mongoose.connect(process.env.MONGODB_URI);
@@ -17,6 +17,7 @@ async function connectToDatabase() {
     }
 }
 
+// Create the Discord client
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -40,7 +41,7 @@ for (const file of commandFiles) {
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
     await connectToDatabase();
-    keepAlive();
+    keepAlive(); // Start the keep-alive server to avoid port issues
 });
 
 client.on('messageCreate', async message => {
@@ -53,7 +54,7 @@ client.on('messageCreate', async message => {
     const content = message.content.slice(config.prefix.length).trim();
     const args = content.split(/ +/);
 
-    // Handling the role command
+    // Special handling for the role command
     if (message.content.startsWith('r ')) {
         const args = message.content.slice(2).trim().split(/ +/);
         const command = client.commands.get('role');
@@ -77,7 +78,7 @@ client.on('messageCreate', async message => {
         return;
     }
 
-    // Handling the verify command
+    // Special handling for the verify command
     if (message.content.startsWith('v ')) {
         const args = message.content.slice(2).trim().split(/ +/);
         const command = client.commands.get('verify');
