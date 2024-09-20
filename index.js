@@ -47,7 +47,7 @@ client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
     // Check if the user has required roles to use commands
-    const allowedRoles = ['952275776303149176', '812318686936825867'];
+    const allowedRoles = config.allowedRoles;
     if (!message.member.roles.cache.some(role => allowedRoles.includes(role.id))) return;
 
     const content = message.content.slice(config.prefix.length).trim();
