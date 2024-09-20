@@ -1,3 +1,11 @@
+const http = require('http');
+
+// Create a dummy server to bind to a port
+http.createServer((req, res) => {
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.end('Discord Bot is running\n');
+}).listen(process.env.PORT || 3000);
+
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 require('dotenv').config();
@@ -47,7 +55,7 @@ client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
     // Check if the user has required roles to use commands
-    const allowedRoles = config.allowedRoles;
+    const allowedRoles = ['952275776303149176', '812318686936825867', '1226224255964938260'];
     if (!message.member.roles.cache.some(role => allowedRoles.includes(role.id))) return;
 
     const content = message.content.slice(config.prefix.length).trim();
