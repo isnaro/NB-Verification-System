@@ -1,11 +1,3 @@
-const http = require('http');
-
-// Create a dummy server to bind to a port
-http.createServer((req, res) => {
-  res.writeHead(200, {'Content-Type': 'text/plain'});
-  res.end('Discord Bot is running\n');
-}).listen(process.env.PORT || 3000);
-
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 require('dotenv').config();
@@ -17,7 +9,7 @@ require('./anticrash');
 // Load the configuration file
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
-// Connect to MongoDB
+// MongoDB Connection
 async function connectToDatabase() {
     if (mongoose.connection.readyState !== 1) {
         await mongoose.connect(process.env.MONGODB_URI);
@@ -55,13 +47,17 @@ client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
     // Check if the user has required roles to use commands
-    const allowedRoles = ['952275776303149176', '812318686936825867'];
+    const allowedRoles = [
+        '952275776303149176', 
+        '812318686936825867', 
+        '1226224255964938260'
+    ];
     if (!message.member.roles.cache.some(role => allowedRoles.includes(role.id))) return;
 
     const content = message.content.slice(config.prefix.length).trim();
     const args = content.split(/ +/);
 
-    // Special handling for the role command
+    // Handling the role command
     if (message.content.startsWith('r ')) {
         const args = message.content.slice(2).trim().split(/ +/);
         const command = client.commands.get('role');
@@ -85,7 +81,7 @@ client.on('messageCreate', async message => {
         return;
     }
 
-    // Special handling for the verify command
+    // Handling the verify command
     if (message.content.startsWith('v ')) {
         const args = message.content.slice(2).trim().split(/ +/);
         const command = client.commands.get('verify');
