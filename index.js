@@ -3,8 +3,8 @@ const fs = require('fs');
 require('dotenv').config();
 const mongoose = require('mongoose');
 const moment = require('moment-timezone');
-const keepAlive = require('./keep_alive'); // Import the keep_alive file
-require('./anticrash'); // Import the anticrash file
+const keepAlive = require('./keep_alive');
+require('./anticrash');
 
 // Load the configuration file
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
@@ -17,7 +17,6 @@ async function connectToDatabase() {
     }
 }
 
-// Create the Discord client
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -41,7 +40,7 @@ for (const file of commandFiles) {
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
     await connectToDatabase();
-    keepAlive(); // Start the keep-alive server to avoid port issues
+    keepAlive();
 });
 
 client.on('messageCreate', async message => {
